@@ -1,24 +1,86 @@
-# WE Weekends
+<p align="center">
+  <img src="web/assets/icon.svg" width="88" height="88" alt="WE Weekends">
+</p>
 
-A free personal Telegram feed of cheap trips. You set departure airports, countries, budgets for solo and family trips, workdays, public and school holidays, and how often to hear from us. Every day the service looks for direct flights and places to stay, scores each option by your rules and sends only what passes.
+<h1 align="center">WE Weekends</h1>
 
-Settings page: https://jaffarsk24.github.io/WE-Weekends/ · Bot: [@WEWeekendsBot](https://t.me/WEWeekendsBot)
+<p align="center">
+  A free, personal Telegram digest of cheap trips from Central Europe.<br>
+  <a href="https://jaffarsk24.github.io/WE-Weekends/"><b>Open the settings page</b></a> · <a href="https://t.me/WEWeekendsBot">@WEWeekendsBot</a> · <a href="https://whiteeagles.sk/en/apps/">Other WE apps</a>
+</p>
 
-## Recommendations only
+<p align="center">
+  <img src="docs/screenshots/landing.jpg" width="820" alt="WE Weekends landing page">
+</p>
 
-WE Weekends sells and books nothing. You book directly with airlines and hotels yourself. We are not a travel agency and take no commissions from partners. Prices come from public sources and may change before you book.
+You tell WE Weekends where you fly from, where you would like to go, how much you want to spend and when you are free. Every day it looks through direct flights from your airports, checks your workdays, public and school holidays, entry rules for your passport, the weather and the price of a stay, scores every option by your own rules and sends the few best ones to Telegram. You change the settings any time on the website, signing in through the same bot.
 
-## How it is built
+**Recommendations only.** WE Weekends sells and books nothing. You book directly with airlines and hotels yourself. We are not a travel agency and take no commissions: partner parameters are stripped from every link. Prices come from public sources and may change before you book.
 
-- `web/`: the settings page, plain HTML, CSS and JavaScript modules with no dependencies, published on GitHub Pages.
-- `server/`: the gateway (Python, FastAPI, SQLite) that stores settings, signs users in through the Telegram bot and runs the search. It runs in Docker behind nginx.
+## What you get
 
-The search is plain deterministic code, so the service costs the same no matter how many people use it: searches are shared per departure airport and filtered for each user.
+<table>
+<tr>
+<td width="56%"><img src="docs/screenshots/digest.png" alt="A daily digest in Telegram"></td>
+<td>
 
-## Status
+**Weekends.** Short trips with return flights and a stay inside your budget, solo and for the family, with the number of workdays and school days each trip costs you.
 
-- Sign-in through Telegram, settings storage, bot commands: done.
-- Search engine and the daily digest: in progress.
+**Diamonds.** Very cheap return flights without a hotel, only at hours that do not eat your days off.
+
+**Last-minute packages.** Headlines and prices from Slovak and Czech agencies.
+
+**Holiday.** Your own holiday dates: direct flights to the countries you chose and your tracked hotels with your dates and party already filled in.
+
+Every trip has 👍 and 👎 buttons. They only reorder future suggestions and fade out after two months; nothing is ever hidden for good.
+
+</td>
+</tr>
+</table>
+
+## Your rules
+
+<p align="center">
+  <img src="docs/screenshots/settings.jpg" width="820" alt="Settings: airports, citizenship and residence">
+</p>
+
+- **Departure airports:** Bratislava, Vienna, Budapest, Prague, Brno, Košice, Kraków and others, one or several. Only direct flights.
+- **Where:** sea, mountains or sights and how much each matters; whole regions (EU, Schengen, Balkans, Caucasus, Middle East, North Africa and more) plus single countries to add or never suggest.
+- **Entry rules:** set your citizenship and EU residence permit, and countries that need a consular visa are left out; e-visas and travel authorisations are marked.
+- **Budget:** one for solo trips and one for the family, with the number of adults and the children's ages. Flights for the family are priced for the exact party.
+- **Calendar:** public holidays of your country, your workdays, how many workdays you can lose, busy dates, Slovak school holidays by region or your own.
+- **Stay:** minimum rating and number of reviews, breakfast, stars.
+- **One digest** at the hour you choose, each section at its own frequency, from daily to weekly.
+
+<p align="center">
+  <img src="docs/screenshots/scoring.jpg" width="820" alt="Scoring presets and fine-tuning">
+</p>
+
+Every option gets bonuses and penalties for price against budget, flight times, lost workdays, weather, the quality of the stay and the discount from the usual price on that route. Pick a preset (as cheap as possible, comfort, with a child) or fine-tune the weights.
+
+<p align="center">
+  <img src="docs/screenshots/mobile.jpg" width="300" alt="Settings on a phone">
+</p>
+
+## How it works
+
+```
+GitHub Pages (web/)  ──HTTPS──>  nginx  ──>  gateway (FastAPI, SQLite)  <──  Telegram webhook
+                                                   │
+                                                   └── engine: shared searches, scoring, digests
+```
+
+- **Flights:** Kiwi.com search, direct flights only. Searches run once per departure airport and country and are shared by all users, so the cost does not grow with the number of people.
+- **Stays:** Booking.com Demand API when credentials are configured; otherwise public rates from Booking.com, Agoda and Trip.com via Xotelo; otherwise a Booking.com search link with the dates, party and filters.
+- **Weather:** Open-Meteo forecast for the next two weeks, the same dates last year further out.
+- **Data:** public holidays from `holidays`, entry rules from the passport-index dataset with EU residence waivers, destinations from Wikidata.
+- **Everything is deterministic code.** No paid services are called per user.
+
+## Privacy and security
+
+We store your Telegram chat id, interface language and saved settings. No names, phone numbers or contacts. Sign-in codes and session keys are kept only as hashes. The site has no analytics, ads or cookies. Delete everything at once on the settings page or with /delete in the bot.
+
+The page runs under a strict Content-Security-Policy with no third-party code; the gateway validates every field against a strict schema, rate-limits per IP, account and chat, and runs in a locked-down container behind nginx and fail2ban. Details and how to report a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -29,6 +91,6 @@ pip install --require-hashes -r requirements.txt && pip install -r requirements-
 pytest -q
 ```
 
-Run the page locally with `python3 -m http.server 8791` in `web/`; it talks to a gateway on `localhost:8790`.
+Run the page with `python3 -m http.server 8791` in `web/`; on localhost it talks to a gateway on port 8790. Print a user's digest without sending it: `python -m weekends.engine.run --dry-run CHAT_ID`.
 
-Security: see [SECURITY.md](SECURITY.md). License: MIT.
+Deployment notes: `server/deploy/`. License: [MIT](LICENSE). Made by [White Eagles & Co.](https://whiteeagles.sk/en/)
