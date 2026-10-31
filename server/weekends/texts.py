@@ -35,6 +35,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "promoted": "Место освободилось: ваш аккаунт WE Weekends активен, рассылка начнётся по вашим настройкам.",
         "language": "Выберите язык:",
         "language_set": "Язык: русский.",
+        "rated": "Учтено: такие варианты будут выше или ниже в подборке.",
     },
     "sk": {
         "welcome": (
@@ -68,6 +69,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "promoted": "Uvoľnilo sa miesto: váš účet WE Weekends je aktívny, posielanie začne podľa vašich nastavení.",
         "language": "Vyberte jazyk:",
         "language_set": "Jazyk: slovenčina.",
+        "rated": "Zaznamenané: podobné možnosti budú vo výbere vyššie alebo nižšie.",
     },
     "en": {
         "welcome": (
@@ -101,6 +103,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "promoted": "A place opened up: your WE Weekends account is active and messages will start according to your settings.",
         "language": "Choose a language:",
         "language_set": "Language: English.",
+        "rated": "Noted: options like this will rank higher or lower.",
     },
 }
 

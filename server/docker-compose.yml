@@ -37,5 +37,33 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # The search engine and the daily digests: the same image, no ports at all.
+  engine:
+    image: we-weekends:local
+    container_name: we-weekends-engine
+    depends_on: [gateway]
+    restart: unless-stopped
+    command: ["python", "-m", "weekends.engine.run"]
+    env_file: .env
+    environment:
+      DATABASE_PATH: /data/weekends.sqlite
+    volumes:
+      - weekends-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: 0.5
+    cpu_shares: 256
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   weekends-data:

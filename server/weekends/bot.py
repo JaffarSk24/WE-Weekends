@@ -8,6 +8,7 @@ from typing import Any
 
 from .auth import Auth
 from .config import Config
+from .engine.store import Store
 from .ratelimit import RateLimiter
 from .telegram import Telegram
 from .texts import lang_of, t
@@ -26,6 +27,7 @@ class Bot:
         self.auth = auth
         self.users = users
         self.limiter = limiter
+        self.store = Store(users.db)
 
     def handle(self, update: dict[str, Any]) -> None:
         if not isinstance(update, dict):
@@ -111,7 +113,8 @@ class Bot:
         chat_id = chat["id"]
         if not isinstance(data, str) or not self.limiter.allow("chat", str(chat_id)):
             return
-        self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64])
+        if not data.startswith("r:"):
+            self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64])
         lang = self._lang(chat_id, sender)
         message_id = message.get("message_id")
         if data == "del:yes":
@@ -122,6 +125,13 @@ class Bot:
                 self.tg.send(promoted_chat, t(promoted_lang, "promoted"), self._site_button(promoted_lang))
         elif data == "del:no":
             self._edit(chat_id, message_id, t(lang, "kept"))
+        elif data.startswith("r:"):
+            parts = data.split(":")
+            if len(parts) == 3 and parts[2] in ("1", "-1") and re.fullmatch(r"[0-9a-f]{12}", parts[1]):
+                aspect = self.store.button_aspect(parts[1], chat_id)
+                if aspect:
+                    self.store.rate(chat_id, aspect, int(parts[2]))
+                    self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64], text=t(lang, "rated"))
         elif data in ("lang:ru", "lang:sk", "lang:en"):
             new = data[5:]
             self.users.set_lang(chat_id, new)
