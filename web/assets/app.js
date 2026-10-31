@@ -549,7 +549,7 @@ function settingsView() {
     const msg = h('p', { class: 'error small', role: 'alert' });
     const add = () => {
       const url = normalizeBooking(input.value);
-      if (!url) { msg.textContent = t('hotel_bad'); return; }
+      if (!url) { msg.textContent = /booking\.com\/share-/i.test(input.value) ? t('hotel_share') : t('hotel_bad'); return; }
       if (!vac.hotels.includes(url) && vac.hotels.length < 10) { vac.hotels.push(url); markDirty(); }
       paintHotels();
     };
@@ -657,7 +657,7 @@ function settingsView() {
 function normalizeBooking(value) {
   try {
     const url = new URL(value.trim());
-    if (url.protocol !== 'https:' || !['www.booking.com', 'booking.com'].includes(url.hostname)) return null;
+    if (url.protocol !== 'https:' || !['www.booking.com', 'booking.com', 'm.booking.com'].includes(url.hostname)) return null;
     const path = url.pathname.toLowerCase();
     if (!/^\/hotel\/[a-z]{2}\/[a-z0-9-]{1,120}(\.[a-z]{2}(-[a-z]{2})?)?\.html$/.test(path)) return null;
     return `https://www.booking.com${path.replace(/\.[a-z]{2}(-[a-z]{2})?\.html$/, '.html')}`;

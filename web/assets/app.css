@@ -97,7 +97,7 @@ nav.langs a[aria-current="page"] { color: var(--on-accent); background: linear-g
 .login p { margin: 0; }
 .code-form label { display: block; font-weight: 600; margin-bottom: 6px; }
 .code-form input { font-size: 24px; letter-spacing: 0.3em; width: 9em; }
-.error { color: var(--bad); min-height: 1.2em; margin: 0; }
+.error { color: var(--bad); min-height: 1.2em; margin: 0; overflow-wrap: anywhere; }
 
 .settings { padding: 24px 20px 120px; display: grid; gap: 16px; }
 .section h2 { margin: 0 0 14px; font-size: 22px; }

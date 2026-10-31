@@ -254,7 +254,7 @@ def _booking_url(value: str) -> str:
     if len(value) > 2048:
         raise ValueError("URL too long")
     parts = urlsplit(value.strip())
-    if parts.scheme != "https" or parts.hostname not in ("www.booking.com", "booking.com"):
+    if parts.scheme != "https" or parts.hostname not in ("www.booking.com", "booking.com", "m.booking.com"):
         raise ValueError("not a booking.com link")
     if parts.port is not None or parts.username or parts.password:
         raise ValueError("not a booking.com link")
