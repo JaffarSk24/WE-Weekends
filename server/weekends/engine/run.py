@@ -281,7 +281,10 @@ class Engine:
                                                 adults=adults, children=children, infants=infants, one_for_city=True,
                                                 adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults)
             flights.sort(key=lambda f: f.price)
-            for f in flights[:MAX_ITEMS["vacation"]]:
+            cheapest: dict[str, Itinerary] = {}
+            for f in flights:  # one line per destination, from whichever airport is cheaper
+                cheapest.setdefault(f.dest, f)
+            for f in list(cheapest.values())[:MAX_ITEMS["vacation"]]:
                 name = city_name(f.dest, f.city, lang)
                 link = f' · <a href="{dg.e(f.url)}">{t["tickets"]} →</a>' if f.url.startswith("https://") else ""
                 lines.append(f"{dg.flag(f.country)} {dg.e(name)} ({dg.e(f.dest)}): 🛫 {round(f.price)}€, {dg.e(f.airline)}, "
