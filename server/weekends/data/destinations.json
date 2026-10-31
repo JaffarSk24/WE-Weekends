@@ -1,0 +1,2990 @@
+{
+ "ACE": {
+  "city": "Arrecife",
+  "country": "ES",
+  "lat": 28.9456,
+  "lon": -13.6053,
+  "names": {
+   "en": "Arrecife",
+   "ru": "Арресифе",
+   "sk": "Arrecife"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "ACH": {
+  "city": "St. Gallen",
+  "country": "CH",
+  "lat": 47.485,
+  "lon": 9.5619,
+  "names": {
+   "en": "St. Gallen",
+   "ru": "Санкт-Галлен",
+   "sk": "St. Gallen"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "ADB": {
+  "city": "İzmir",
+  "country": "TR",
+  "lat": 38.2892,
+  "lon": 27.155,
+  "names": {
+   "en": "İzmir",
+   "ru": "Измир",
+   "sk": "Izmir"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "ADD": {
+  "city": "Addis Ababa",
+  "country": "ET",
+  "lat": 8.9778,
+  "lon": 38.7994,
+  "names": {
+   "en": "Addis Ababa",
+   "ru": "Аддис-Абеба",
+   "sk": "Addis Abeba"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "AGA": {
+  "city": "Agadir",
+  "country": "MA",
+  "lat": 30.3225,
+  "lon": -9.4114,
+  "names": {
+   "en": "Agadir",
+   "ru": "Агадир",
+   "sk": "Agadir"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "AGP": {
+  "city": "Málaga",
+  "country": "ES",
+  "lat": 36.675,
+  "lon": -4.4992,
+  "names": {
+   "en": "Málaga",
+   "ru": "Малага",
+   "sk": "Málaga"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "AHO": {
+  "city": "Alghero",
+  "country": "IT",
+  "lat": 40.6311,
+  "lon": 8.2886,
+  "names": {
+   "en": "Alghero",
+   "ru": "Альгеро"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "AJA": {
+  "city": "Ajaccio",
+  "country": "FR",
+  "lat": 41.9239,
+  "lon": 8.8025,
+  "names": {
+   "en": "Ajaccio",
+   "ru": "Аяччо",
+   "sk": "Ajaccio"
+  },
+  "tags": [
+   "sea",
+   "mountains"
+  ]
+ },
+ "ALA": {
+  "city": "Almaty",
+  "country": "KZ",
+  "lat": 43.3519,
+  "lon": 77.0406,
+  "names": {
+   "en": "Almaty",
+   "ru": "Алма-Ата",
+   "sk": "Almati"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "ALC": {
+  "city": "Alicante",
+  "country": "ES",
+  "lat": 38.2822,
+  "lon": -0.5581,
+  "names": {
+   "en": "Alicante",
+   "ru": "Аликанте",
+   "sk": "Alicante"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "ALG": {
+  "city": "Algiers",
+  "country": "DZ",
+  "lat": 36.6944,
+  "lon": 3.2169,
+  "names": {
+   "en": "Algiers",
+   "ru": "Алжир",
+   "sk": "Alžír"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "AMM": {
+  "city": "Amman",
+  "country": "JO",
+  "lat": 31.7225,
+  "lon": 35.9933,
+  "names": {
+   "en": "Amman",
+   "ru": "Амман",
+   "sk": "Ammán"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "AMS": {
+  "city": "Amsterdam",
+  "country": "NL",
+  "lat": 52.3081,
+  "lon": 4.7642,
+  "names": {
+   "en": "Amsterdam",
+   "ru": "Амстердам",
+   "sk": "Amsterdam"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ARN": {
+  "city": "Stockholm",
+  "country": "SE",
+  "lat": 59.6519,
+  "lon": 17.9186,
+  "names": {
+   "en": "Stockholm",
+   "ru": "Стокгольм",
+   "sk": "Štokholm"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ASR": {
+  "city": "Kayseri",
+  "country": "TR",
+  "lat": 38.7703,
+  "lon": 35.4953,
+  "names": {
+   "en": "Kayseri",
+   "ru": "Кайсери",
+   "sk": "Kayseri"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "ATH": {
+  "city": "Athens",
+  "country": "GR",
+  "lat": 37.9364,
+  "lon": 23.9444,
+  "names": {
+   "en": "Athens",
+   "ru": "Афины",
+   "sk": "Atény"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "AUH": {
+  "city": "Abu Dhabi",
+  "country": "AE",
+  "lat": 24.4331,
+  "lon": 54.6511,
+  "names": {
+   "en": "Abu Dhabi",
+   "ru": "Абу-Даби",
+   "sk": "Abú Zabí"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "AYT": {
+  "city": "Antalya",
+  "country": "TR",
+  "lat": 36.9003,
+  "lon": 30.7928,
+  "names": {
+   "en": "Antalya",
+   "ru": "Анталья",
+   "sk": "Antalya"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "BBU": {
+  "city": "Bucharest",
+  "country": "RO",
+  "lat": 44.5036,
+  "lon": 26.1036,
+  "names": {
+   "en": "Bucharest",
+   "ru": "Бухарест",
+   "sk": "Bukurešť"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BCN": {
+  "city": "Barcelona",
+  "country": "ES",
+  "lat": 41.2969,
+  "lon": 2.0783,
+  "names": {
+   "en": "Barcelona",
+   "ru": "Барселона",
+   "sk": "Barcelona"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "BEG": {
+  "city": "Belgrade",
+  "country": "RS",
+  "lat": 44.8194,
+  "lon": 20.3069,
+  "names": {
+   "en": "Belgrade",
+   "ru": "Белград",
+   "sk": "Belehrad"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BER": {
+  "city": "Berlin",
+  "country": "DE",
+  "lat": 52.3622,
+  "lon": 13.5007,
+  "names": {
+   "en": "Berlin",
+   "ru": "Берлин",
+   "sk": "Berlín"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BEY": {
+  "city": "Beirut",
+  "country": "LB",
+  "lat": 33.8211,
+  "lon": 35.4883,
+  "names": {
+   "en": "Beirut",
+   "ru": "Бейрут",
+   "sk": "Bejrút"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "BFS": {
+  "city": "Belfast",
+  "country": "GB",
+  "lat": 54.6575,
+  "lon": -6.2158,
+  "names": {
+   "en": "Belfast",
+   "ru": "Белфаст",
+   "sk": "Belfast"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BGO": {
+  "city": "Bergen",
+  "country": "NO",
+  "lat": 60.2936,
+  "lon": 5.2181,
+  "names": {
+   "en": "Bergen",
+   "ru": "Берген",
+   "sk": "Bergen"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "BGY": {
+  "city": "Bergamo",
+  "country": "IT",
+  "lat": 45.6655,
+  "lon": 9.6995,
+  "names": {
+   "en": "Bergamo",
+   "ru": "Бергамо",
+   "sk": "Bergamo"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "BHX": {
+  "city": "Birmingham",
+  "country": "GB",
+  "lat": 52.4539,
+  "lon": -1.7481,
+  "names": {
+   "en": "Birmingham",
+   "ru": "Бирмингем",
+   "sk": "Birmingham"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BIO": {
+  "city": "Bilbao",
+  "country": "ES",
+  "lat": 43.3011,
+  "lon": -2.9106,
+  "names": {
+   "en": "Bilbao",
+   "ru": "Бильбао",
+   "sk": "Bilbao"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "BKK": {
+  "city": "Bangkok",
+  "country": "TH",
+  "lat": 13.6811,
+  "lon": 100.7472,
+  "names": {
+   "en": "Bangkok",
+   "ru": "Бангкок",
+   "sk": "Bangkok"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BLL": {
+  "city": "Billund",
+  "country": "DK",
+  "lat": 55.7403,
+  "lon": 9.1519,
+  "names": {
+   "en": "Billund",
+   "ru": "Биллунн"
+  },
+  "tags": []
+ },
+ "BLQ": {
+  "city": "Bologna",
+  "country": "IT",
+  "lat": 44.5354,
+  "lon": 11.2887,
+  "names": {
+   "en": "Bologna",
+   "ru": "Болонья",
+   "sk": "Bologna"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BNX": {
+  "city": "Banja Luka",
+  "country": "BA",
+  "lat": 44.9414,
+  "lon": 17.2975,
+  "names": {
+   "en": "Banja Luka",
+   "ru": "Баня-Лука",
+   "sk": "Banja Luka"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BOD": {
+  "city": "Bordeaux",
+  "country": "FR",
+  "lat": 44.8283,
+  "lon": -0.7156,
+  "names": {
+   "en": "Bordeaux",
+   "ru": "Бордо",
+   "sk": "Bordeaux"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BOH": {
+  "city": "Bournemouth",
+  "country": "GB",
+  "lat": 50.78,
+  "lon": -1.8425,
+  "names": {
+   "en": "Bournemouth",
+   "ru": "Борнмут",
+   "sk": "Bournemouth"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "BOS": {
+  "city": "Boston",
+  "country": "US",
+  "lat": 42.3631,
+  "lon": -71.0064,
+  "names": {
+   "en": "Boston",
+   "ru": "Бостон",
+   "sk": "Boston"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BRE": {
+  "city": "Bremen",
+  "country": "DE",
+  "lat": 53.0474,
+  "lon": 8.7867,
+  "names": {
+   "en": "Bremen",
+   "ru": "Бремен",
+   "sk": "Brémy"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BRI": {
+  "city": "Bari",
+  "country": "IT",
+  "lat": 41.1389,
+  "lon": 16.7606,
+  "names": {
+   "en": "Bari",
+   "ru": "Бари",
+   "sk": "Bari"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "BRS": {
+  "city": "Bristol",
+  "country": "GB",
+  "lat": 51.3828,
+  "lon": -2.7192,
+  "names": {
+   "en": "Bristol",
+   "ru": "Бристоль",
+   "sk": "Bristol"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BSL": {
+  "city": "Basel",
+  "country": "CH",
+  "lat": 47.5997,
+  "lon": 7.5316,
+  "names": {
+   "en": "Basel",
+   "ru": "Базель",
+   "sk": "Bazilej"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BUD": {
+  "city": "Budapest",
+  "country": "HU",
+  "lat": 47.4394,
+  "lon": 19.2619,
+  "names": {
+   "en": "Budapest",
+   "ru": "Будапешт",
+   "sk": "Budapešť"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "BVA": {
+  "city": "Beauvais",
+  "country": "FR",
+  "lat": 49.4544,
+  "lon": 2.1128,
+  "names": {
+   "en": "Beauvais",
+   "ru": "Бове",
+   "sk": "Beauvais"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CAG": {
+  "city": "Cagliari",
+  "country": "IT",
+  "lat": 39.2515,
+  "lon": 9.0543,
+  "names": {
+   "en": "Cagliari",
+   "ru": "Кальяри",
+   "sk": "Cagliari"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "CAI": {
+  "city": "Cairo",
+  "country": "EG",
+  "lat": 30.1219,
+  "lon": 31.4056,
+  "names": {
+   "en": "Cairo",
+   "ru": "Каир",
+   "sk": "Káhira"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CAN": {
+  "city": "Guangzhou",
+  "country": "CN",
+  "lat": 23.3924,
+  "lon": 113.2988,
+  "names": {
+   "en": "Guangzhou",
+   "ru": "Гуанчжоу",
+   "sk": "Kanton"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CDT": {
+  "city": "Castellón de la Plana",
+  "country": "ES",
+  "lat": 40.2097,
+  "lon": 0.0697,
+  "names": {
+   "en": "Castellón de la Plana",
+   "ru": "Кастельон-де-ла-Плана",
+   "sk": "Castellón de la Plana"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "CFU": {
+  "city": "Corfu",
+  "country": "GR",
+  "lat": 39.6019,
+  "lon": 19.9122,
+  "names": {
+   "en": "Corfu",
+   "ru": "Керкира",
+   "sk": "Korfu"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "CGN": {
+  "city": "Cologne",
+  "country": "DE",
+  "lat": 50.8659,
+  "lon": 7.1427,
+  "names": {
+   "en": "Cologne",
+   "ru": "Кёльн",
+   "sk": "Kolín nad Rýnom"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CHQ": {
+  "city": "Chania",
+  "country": "GR",
+  "lat": 35.5317,
+  "lon": 24.1497,
+  "names": {
+   "en": "Chania",
+   "ru": "Ханья",
+   "sk": "Chania"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "CIA": {
+  "city": "Rome",
+  "country": "IT",
+  "lat": 41.7995,
+  "lon": 12.5914,
+  "names": {
+   "en": "Rome",
+   "ru": "Рим",
+   "sk": "Rím"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CIT": {
+  "city": "Shymkent",
+  "country": "KZ",
+  "lat": 42.365,
+  "lon": 69.4761,
+  "names": {
+   "en": "Shymkent",
+   "ru": "Шымкент"
+  },
+  "tags": []
+ },
+ "CKG": {
+  "city": "Chongqing",
+  "country": "CN",
+  "lat": 29.7192,
+  "lon": 106.6417,
+  "names": {
+   "en": "Chongqing",
+   "ru": "Чунцин",
+   "sk": "Čchung-čching"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CPH": {
+  "city": "Copenhagen",
+  "country": "DK",
+  "lat": 55.6181,
+  "lon": 12.6561,
+  "names": {
+   "en": "Copenhagen",
+   "ru": "Копенгаген",
+   "sk": "Kodaň"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CRL": {
+  "city": "Brussels",
+  "country": "BE",
+  "lat": 50.4592,
+  "lon": 4.4538,
+  "names": {
+   "ru": "Шарлеруа",
+   "sk": "Charleroi"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "CTA": {
+  "city": "Catania",
+  "country": "IT",
+  "lat": 37.4667,
+  "lon": 15.0639,
+  "names": {
+   "en": "Catania",
+   "ru": "Катания",
+   "sk": "Catania"
+  },
+  "tags": [
+   "sea",
+   "mountains"
+  ]
+ },
+ "DBV": {
+  "city": "Dubrovnik",
+  "country": "HR",
+  "lat": 42.5614,
+  "lon": 18.2683,
+  "names": {
+   "en": "Dubrovnik",
+   "ru": "Дубровник",
+   "sk": "Dubrovník"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "DLM": {
+  "city": "Muğla",
+  "country": "TR",
+  "lat": 36.7147,
+  "lon": 28.7928,
+  "names": {
+   "en": "Muğla",
+   "ru": "Мугла",
+   "sk": "Muğla"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "DOH": {
+  "city": "Doha",
+  "country": "QA",
+  "lat": 25.2731,
+  "lon": 51.6081,
+  "names": {
+   "en": "Doha",
+   "ru": "Доха",
+   "sk": "Dauha"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "DTM": {
+  "city": "Dortmund",
+  "country": "DE",
+  "lat": 51.5183,
+  "lon": 7.6122,
+  "names": {
+   "en": "Dortmund",
+   "ru": "Дортмунд",
+   "sk": "Dortmund"
+  },
+  "tags": []
+ },
+ "DUB": {
+  "city": "Dublin",
+  "country": "IE",
+  "lat": 53.4214,
+  "lon": -6.27,
+  "names": {
+   "en": "Dublin",
+   "ru": "Дублин",
+   "sk": "Dublin"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "DUS": {
+  "city": "Düsseldorf",
+  "country": "DE",
+  "lat": 51.2809,
+  "lon": 6.7573,
+  "names": {
+   "en": "Düsseldorf",
+   "ru": "Дюссельдорф",
+   "sk": "Düsseldorf"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "DXB": {
+  "city": "Dubai",
+  "country": "AE",
+  "lat": 25.2528,
+  "lon": 55.3644,
+  "names": {
+   "en": "Dubai",
+   "ru": "Дубай",
+   "sk": "Dubaj"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "EBL": {
+  "city": "Erbil",
+  "country": "IQ",
+  "lat": 36.2375,
+  "lon": 43.9631,
+  "names": {
+   "en": "Erbil",
+   "ru": "Эрбиль",
+   "sk": "Arbíl"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "EDI": {
+  "city": "Edinburgh",
+  "country": "GB",
+  "lat": 55.95,
+  "lon": -3.3725,
+  "names": {
+   "en": "Edinburgh",
+   "ru": "Эдинбург",
+   "sk": "Edinburgh"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "EIN": {
+  "city": "Eindhoven",
+  "country": "NL",
+  "lat": 51.4506,
+  "lon": 5.3742,
+  "names": {
+   "en": "Eindhoven",
+   "ru": "Эйндховен",
+   "sk": "Eindhoven"
+  },
+  "tags": []
+ },
+ "EMA": {
+  "city": "Nottingham",
+  "country": "GB",
+  "lat": 52.8306,
+  "lon": -1.3278,
+  "names": {
+   "en": "Nottingham",
+   "ru": "Ноттингем",
+   "sk": "Nottingham"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ESB": {
+  "city": "Ankara",
+  "country": "TR",
+  "lat": 40.1281,
+  "lon": 32.995,
+  "names": {
+   "en": "Ankara",
+   "ru": "Анкара",
+   "sk": "Ankara"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "EVN": {
+  "city": "Yerevan",
+  "country": "AM",
+  "lat": 40.1472,
+  "lon": 44.3958,
+  "names": {
+   "en": "Yerevan",
+   "ru": "Ереван",
+   "sk": "Jerevan"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "FAO": {
+  "city": "Faro",
+  "country": "PT",
+  "lat": 37.0144,
+  "lon": -7.9658,
+  "names": {
+   "en": "Faro",
+   "ru": "Фару",
+   "sk": "Faro"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "FCO": {
+  "city": "Rome",
+  "country": "IT",
+  "lat": 41.7956,
+  "lon": 12.2499,
+  "names": {
+   "en": "Rome",
+   "ru": "Рим",
+   "sk": "Rím"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "FLR": {
+  "city": "Florence",
+  "country": "IT",
+  "lat": 43.8086,
+  "lon": 11.2028,
+  "names": {
+   "en": "Florence",
+   "ru": "Флоренция",
+   "sk": "Florencia"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "FMM": {
+  "city": "Memmingen",
+  "country": "DE",
+  "lat": 47.9888,
+  "lon": 10.2395,
+  "names": {
+   "en": "Memmingen",
+   "ru": "Мемминген",
+   "sk": "Memmingen"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "FNC": {
+  "city": "Funchal",
+  "country": "PT",
+  "lat": 32.6942,
+  "lon": -16.7781,
+  "names": {
+   "en": "Funchal",
+   "ru": "Фуншал",
+   "sk": "Funchal"
+  },
+  "tags": [
+   "sea",
+   "mountains"
+  ]
+ },
+ "FRA": {
+  "city": "Frankfurt",
+  "country": "DE",
+  "lat": 50.0333,
+  "lon": 8.5705,
+  "names": {
+   "en": "Frankfurt",
+   "ru": "Франкфурт-на-Майне",
+   "sk": "Frankfurt nad Mohanom"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "FUE": {
+  "city": "Fuerteventura",
+  "country": "ES",
+  "lat": 28.4528,
+  "lon": -13.8639,
+  "names": {
+   "en": "Fuerteventura",
+   "ru": "Фуэртевентура"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "GDN": {
+  "city": "Gdańsk",
+  "country": "PL",
+  "lat": 54.3775,
+  "lon": 18.4661,
+  "names": {
+   "en": "Gdańsk",
+   "ru": "Гданьск",
+   "sk": "Gdansk"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "GHV": {
+  "city": "Brașov",
+  "country": "RO",
+  "lat": 45.7071,
+  "lon": 25.5243,
+  "names": {
+   "en": "Brașov",
+   "ru": "Брашов",
+   "sk": "Brašov"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "GLA": {
+  "city": "Glasgow",
+  "country": "GB",
+  "lat": 55.8719,
+  "lon": -4.4331,
+  "names": {
+   "en": "Glasgow",
+   "ru": "Глазго",
+   "sk": "Glasgow"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "GOT": {
+  "city": "Gothenburg",
+  "country": "SE",
+  "lat": 57.7092,
+  "lon": 11.7872,
+  "names": {
+   "en": "Gothenburg",
+   "ru": "Гётеборг",
+   "sk": "Göteborg"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "GVA": {
+  "city": "Geneva",
+  "country": "CH",
+  "lat": 46.2383,
+  "lon": 6.1094,
+  "names": {
+   "en": "Geneva",
+   "ru": "Женева",
+   "sk": "Ženeva"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "GYD": {
+  "city": "Baku",
+  "country": "AZ",
+  "lat": 40.4675,
+  "lon": 50.0467,
+  "names": {
+   "en": "Baku",
+   "ru": "Баку",
+   "sk": "Baku"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "HAJ": {
+  "city": "Hanover",
+  "country": "DE",
+  "lat": 52.4602,
+  "lon": 9.6835,
+  "names": {
+   "en": "Hanover",
+   "ru": "Ганновер",
+   "sk": "Hannover"
+  },
+  "tags": []
+ },
+ "HAM": {
+  "city": "Hamburg",
+  "country": "DE",
+  "lat": 53.6304,
+  "lon": 9.9882,
+  "names": {
+   "en": "Hamburg",
+   "ru": "Гамбург",
+   "sk": "Hamburg"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "HAN": {
+  "city": "Hanoi",
+  "country": "VN",
+  "lat": 21.2211,
+  "lon": 105.8072,
+  "names": {
+   "en": "Hanoi",
+   "ru": "Ханой",
+   "sk": "Hanoj"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "HEL": {
+  "city": "Helsinki",
+  "country": "FI",
+  "lat": 60.3172,
+  "lon": 24.9633,
+  "names": {
+   "en": "Helsinki",
+   "ru": "Хельсинки",
+   "sk": "Helsinki"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "HER": {
+  "city": "Heraklion",
+  "country": "GR",
+  "lat": 35.3397,
+  "lon": 25.1803,
+  "names": {
+   "en": "Heraklion",
+   "ru": "Ираклион",
+   "sk": "Iraklio"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "HND": {
+  "city": "Tokyo",
+  "country": "JP",
+  "lat": 35.5533,
+  "lon": 139.7811,
+  "names": {
+   "en": "Tokyo",
+   "ru": "Токио",
+   "sk": "Tokio"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "HRG": {
+  "city": "Hurghada",
+  "country": "EG",
+  "lat": 27.1781,
+  "lon": 33.7992,
+  "names": {
+   "en": "Hurghada",
+   "ru": "Хургада",
+   "sk": "Hurgada"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "IAD": {
+  "city": "Washington, D.C.",
+  "country": "US",
+  "lat": 38.9444,
+  "lon": -77.4558,
+  "names": {
+   "en": "Washington, D.C.",
+   "ru": "Вашингтон",
+   "sk": "Washington D.C."
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "IAS": {
+  "city": "Iași",
+  "country": "RO",
+  "lat": 47.1789,
+  "lon": 27.62,
+  "names": {
+   "en": "Iași",
+   "ru": "Яссы",
+   "sk": "Jasy"
+  },
+  "tags": []
+ },
+ "IBZ": {
+  "city": "Ibiza",
+  "country": "ES",
+  "lat": 38.8729,
+  "lon": 1.3731,
+  "names": {
+   "en": "Ibiza",
+   "ru": "Ивиса",
+   "sk": "Ibiza"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "ICN": {
+  "city": "Seoul",
+  "country": "KR",
+  "lat": 37.4625,
+  "lon": 126.4392,
+  "names": {
+   "en": "Seoul",
+   "ru": "Сеул",
+   "sk": "Soul"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "IKA": {
+  "city": "Tehran",
+  "country": "IR",
+  "lat": 35.4161,
+  "lon": 51.1522,
+  "names": {
+   "en": "Tehran",
+   "ru": "Тегеран",
+   "sk": "Teherán"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "INI": {
+  "city": "Niš",
+  "country": "RS",
+  "lat": 43.3372,
+  "lon": 21.8536,
+  "names": {
+   "en": "Niš",
+   "ru": "Ниш",
+   "sk": "Niš"
+  },
+  "tags": []
+ },
+ "INN": {
+  "city": "Innsbruck",
+  "country": "AT",
+  "lat": 47.2603,
+  "lon": 11.3439,
+  "names": {
+   "en": "Innsbruck",
+   "ru": "Инсбрук",
+   "sk": "Innsbruck"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "IST": {
+  "city": "Istanbul",
+  "country": "TR",
+  "lat": 41.2608,
+  "lon": 28.7422,
+  "names": {
+   "en": "Istanbul",
+   "ru": "Стамбул",
+   "sk": "Istanbul"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "IVL": {
+  "city": "Ivalo",
+  "country": "FI",
+  "lat": 68.6108,
+  "lon": 27.4139,
+  "names": {
+   "en": "Ivalo",
+   "ru": "Ивало"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "JED": {
+  "city": "Jeddah",
+  "country": "SA",
+  "lat": 21.6617,
+  "lon": 39.173,
+  "names": {
+   "en": "Jeddah",
+   "ru": "Джидда",
+   "sk": "Džidda"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "JFK": {
+  "city": "New York City",
+  "country": "US",
+  "lat": 40.64,
+  "lon": -73.78,
+  "names": {
+   "en": "New York City",
+   "ru": "Нью-Йорк",
+   "sk": "New York"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "KEF": {
+  "city": "Keflavík",
+  "country": "IS",
+  "lat": 63.985,
+  "lon": -22.6056,
+  "names": {
+   "en": "Keflavík",
+   "ru": "Кеблавик",
+   "sk": "Keflavík"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "KLU": {
+  "city": "Klagenfurt am Wörthersee",
+  "country": "AT",
+  "lat": 46.6428,
+  "lon": 14.3372,
+  "names": {
+   "en": "Klagenfurt am Wörthersee",
+   "ru": "Клагенфурт-ам-Вёртерзе",
+   "sk": "Klagenfurt am Wörthersee"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "KRK": {
+  "city": "Kraków",
+  "country": "PL",
+  "lat": 50.0778,
+  "lon": 19.7847,
+  "names": {
+   "en": "Kraków",
+   "ru": "Краков",
+   "sk": "Krakov"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "KTT": {
+  "city": "Kittilä",
+  "country": "FI",
+  "lat": 67.6986,
+  "lon": 24.8481,
+  "names": {
+   "en": "Kittilä",
+   "ru": "Киттиля"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "KUT": {
+  "city": "Kutaisi",
+  "country": "GE",
+  "lat": 42.1764,
+  "lon": 42.4825,
+  "names": {
+   "en": "Kutaisi",
+   "ru": "Кутаиси",
+   "sk": "Kutaisi"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "KWI": {
+  "city": "Kuwait",
+  "country": "KW",
+  "lat": 29.2268,
+  "lon": 47.98,
+  "names": {
+   "en": "Kuwait",
+   "ru": "Кувейт",
+   "sk": "Kuvajt"
+  },
+  "tags": []
+ },
+ "LAX": {
+  "city": "Los Angeles",
+  "country": "US",
+  "lat": 33.9425,
+  "lon": -118.4081,
+  "names": {
+   "en": "Los Angeles",
+   "ru": "Лос-Анджелес",
+   "sk": "Los Angeles"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LBA": {
+  "city": "Leeds",
+  "country": "GB",
+  "lat": 53.8658,
+  "lon": -1.6606,
+  "names": {
+   "en": "Leeds",
+   "ru": "Лидс",
+   "sk": "Leeds"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LCA": {
+  "city": "Larnaca",
+  "country": "CY",
+  "lat": 34.8789,
+  "lon": 33.6303,
+  "names": {
+   "en": "Larnaca",
+   "ru": "Ларнака",
+   "sk": "Larnaka"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "LEJ": {
+  "city": "Leipzig",
+  "country": "DE",
+  "lat": 51.424,
+  "lon": 12.2364,
+  "names": {
+   "en": "Leipzig",
+   "ru": "Лейпциг",
+   "sk": "Lipsko"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LIL": {
+  "city": "Lille",
+  "country": "FR",
+  "lat": 50.5633,
+  "lon": 3.0869,
+  "names": {
+   "en": "Lille",
+   "ru": "Лилль",
+   "sk": "Lille"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LIS": {
+  "city": "Lisbon",
+  "country": "PT",
+  "lat": 38.7742,
+  "lon": -9.1342,
+  "names": {
+   "en": "Lisbon",
+   "ru": "Лиссабон",
+   "sk": "Lisabon"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "LPA": {
+  "city": "Las Palmas de Gran Canaria",
+  "country": "ES",
+  "lat": 27.9319,
+  "lon": -15.3867,
+  "names": {
+   "en": "Las Palmas de Gran Canaria",
+   "ru": "Лас-Пальмас",
+   "sk": "Las Palmas de Gran Canaria"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "LPL": {
+  "city": "Liverpool",
+  "country": "GB",
+  "lat": 53.3336,
+  "lon": -2.8497,
+  "names": {
+   "en": "Liverpool",
+   "ru": "Ливерпуль",
+   "sk": "Liverpool"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LTN": {
+  "city": "London",
+  "country": "GB",
+  "lat": 51.8747,
+  "lon": -0.3683,
+  "names": {
+   "en": "London",
+   "ru": "Лондон",
+   "sk": "Londýn"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LUX": {
+  "city": "Luxembourg",
+  "country": "LU",
+  "lat": 49.6233,
+  "lon": 6.2044,
+  "names": {
+   "en": "Luxembourg",
+   "ru": "Люксембург",
+   "sk": "Luxemburg"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "LYS": {
+  "city": "Lyon",
+  "country": "FR",
+  "lat": 45.7256,
+  "lon": 5.0811,
+  "names": {
+   "en": "Lyon",
+   "ru": "Лион",
+   "sk": "Lyon"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "MAD": {
+  "city": "Madrid",
+  "country": "ES",
+  "lat": 40.4722,
+  "lon": -3.5608,
+  "names": {
+   "en": "Madrid",
+   "ru": "Мадрид",
+   "sk": "Madrid"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "MAN": {
+  "city": "Manchester",
+  "country": "GB",
+  "lat": 53.3539,
+  "lon": -2.275,
+  "names": {
+   "en": "Manchester",
+   "ru": "Манчестер",
+   "sk": "Manchester"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "MCT": {
+  "city": "Muscat",
+  "country": "OM",
+  "lat": 23.601,
+  "lon": 58.2869,
+  "names": {
+   "en": "Muscat",
+   "ru": "Маскат",
+   "sk": "Maskat"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "MLA": {
+  "city": "Malta",
+  "country": "MT",
+  "lat": 35.8575,
+  "lon": 14.4775,
+  "names": {
+   "en": "Malta",
+   "ru": "Мальта",
+   "sk": "Malta"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "MLE": {
+  "city": "Malé",
+  "country": "MV",
+  "lat": 4.1918,
+  "lon": 73.5291,
+  "names": {
+   "en": "Malé",
+   "ru": "Мале",
+   "sk": "Male"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "MRS": {
+  "city": "Marseille",
+  "country": "FR",
+  "lat": 43.4367,
+  "lon": 5.215,
+  "names": {
+   "en": "Marseille",
+   "ru": "Марсель",
+   "sk": "Marseille"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "MRU": {
+  "city": "Plaine Magnien",
+  "country": "MU",
+  "lat": -20.43,
+  "lon": 57.683,
+  "names": {
+   "en": "Plaine Magnien"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "MST": {
+  "city": "Maastricht",
+  "country": "NL",
+  "lat": 50.9126,
+  "lon": 5.7695,
+  "names": {
+   "en": "Maastricht",
+   "ru": "Маастрихт",
+   "sk": "Maastricht"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "MUC": {
+  "city": "Munich",
+  "country": "DE",
+  "lat": 48.3538,
+  "lon": 11.7861,
+  "names": {
+   "en": "Munich",
+   "ru": "Мюнхен",
+   "sk": "Mníchov"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "MXP": {
+  "city": "Milan",
+  "country": "IT",
+  "lat": 45.63,
+  "lon": 8.7231,
+  "names": {
+   "en": "Milan",
+   "ru": "Милан",
+   "sk": "Miláno"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "NAP": {
+  "city": "Naples",
+  "country": "IT",
+  "lat": 40.8844,
+  "lon": 14.2908,
+  "names": {
+   "en": "Naples",
+   "ru": "Неаполь",
+   "sk": "Neapol"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "NCE": {
+  "city": "Nice",
+  "country": "FR",
+  "lat": 43.6653,
+  "lon": 7.215,
+  "names": {
+   "en": "Nice",
+   "ru": "Ницца",
+   "sk": "Nice"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "NCL": {
+  "city": "Tyne and Wear",
+  "country": "GB",
+  "lat": 55.0375,
+  "lon": -1.6917,
+  "names": {
+   "en": "Tyne and Wear",
+   "ru": "Тайн-энд-Уир",
+   "sk": "Tyne and Wear"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "NGB": {
+  "city": "Ningbo",
+  "country": "CN",
+  "lat": 29.8267,
+  "lon": 121.4619,
+  "names": {
+   "en": "Ningbo",
+   "ru": "Нинбо"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "NQZ": {
+  "city": "Astana",
+  "country": "KZ",
+  "lat": 51.0222,
+  "lon": 71.4669,
+  "names": {
+   "en": "Astana",
+   "ru": "Астана",
+   "sk": "Astana"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "NTE": {
+  "city": "Nantes",
+  "country": "FR",
+  "lat": 47.1569,
+  "lon": -1.6078,
+  "names": {
+   "en": "Nantes",
+   "ru": "Нант",
+   "sk": "Nantes"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "NUE": {
+  "city": "Nuremberg",
+  "country": "DE",
+  "lat": 49.4987,
+  "lon": 11.078,
+  "names": {
+   "en": "Nuremberg",
+   "ru": "Нюрнберг",
+   "sk": "Norimberg"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "OHD": {
+  "city": "Ohrid",
+  "country": "MK",
+  "lat": 41.18,
+  "lon": 20.7422,
+  "names": {
+   "en": "Ohrid",
+   "ru": "Охрид",
+   "sk": "Ochrid"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "OLB": {
+  "city": "Olbia",
+  "country": "IT",
+  "lat": 40.8987,
+  "lon": 9.5176,
+  "names": {
+   "en": "Olbia",
+   "ru": "Ольбия",
+   "sk": "Olbia"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "OPO": {
+  "city": "Porto",
+  "country": "PT",
+  "lat": 41.2356,
+  "lon": -8.6781,
+  "names": {
+   "en": "Porto",
+   "ru": "Порту",
+   "sk": "Porto"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ORD": {
+  "city": "Chicago",
+  "country": "US",
+  "lat": 41.9786,
+  "lon": -87.9047,
+  "names": {
+   "en": "Chicago",
+   "ru": "Чикаго",
+   "sk": "Chicago"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ORK": {
+  "city": "Cork",
+  "country": "IE",
+  "lat": 51.8414,
+  "lon": -8.4911,
+  "names": {
+   "en": "Cork",
+   "ru": "Корк",
+   "sk": "Cork"
+  },
+  "tags": []
+ },
+ "ORY": {
+  "city": "Paris",
+  "country": "FR",
+  "lat": 48.7233,
+  "lon": 2.3794,
+  "names": {
+   "en": "Paris",
+   "ru": "Париж",
+   "sk": "Paríž"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "OSL": {
+  "city": "Eastern Norway",
+  "country": "NO",
+  "lat": 60.2028,
+  "lon": 11.0839,
+  "names": {
+   "en": "Eastern Norway",
+   "ru": "Эстланн",
+   "sk": "Østlandet"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "OTP": {
+  "city": "Bucharest",
+  "country": "RO",
+  "lat": 44.5707,
+  "lon": 26.0822,
+  "names": {
+   "en": "Bucharest",
+   "ru": "Бухарест",
+   "sk": "Bukurešť"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PDL": {
+  "city": "Ponta Delgada",
+  "country": "PT",
+  "lat": 37.7419,
+  "lon": -25.6978,
+  "names": {
+   "en": "Ponta Delgada",
+   "ru": "Понта-Делгада"
+  },
+  "tags": [
+   "sea",
+   "mountains"
+  ]
+ },
+ "PEK": {
+  "city": "Beijing",
+  "country": "CN",
+  "lat": 40.08,
+  "lon": 116.5844,
+  "names": {
+   "en": "Beijing",
+   "ru": "Пекин",
+   "sk": "Peking"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PFO": {
+  "city": "Paphos",
+  "country": "CY",
+  "lat": 34.7183,
+  "lon": 32.485,
+  "names": {
+   "en": "Paphos",
+   "ru": "Пафос",
+   "sk": "Pafos"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "PMI": {
+  "city": "Palma",
+  "country": "ES",
+  "lat": 39.5517,
+  "lon": 2.7388,
+  "names": {
+   "en": "Palma",
+   "ru": "Пальма",
+   "sk": "Palma de Mallorca"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "PMO": {
+  "city": "Palermo",
+  "country": "IT",
+  "lat": 38.1819,
+  "lon": 13.0994,
+  "names": {
+   "en": "Palermo",
+   "ru": "Палермо",
+   "sk": "Palermo"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "POZ": {
+  "city": "Poznań",
+  "country": "PL",
+  "lat": 52.421,
+  "lon": 16.8263,
+  "names": {
+   "en": "Poznań",
+   "ru": "Познань",
+   "sk": "Poznaň"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PRG": {
+  "city": "Prague",
+  "country": "CZ",
+  "lat": 50.1008,
+  "lon": 14.26,
+  "names": {
+   "en": "Prague",
+   "ru": "Прага",
+   "sk": "Praha"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PRN": {
+  "city": "Pristina",
+  "country": "XK",
+  "lat": 42.5728,
+  "lon": 21.0358,
+  "names": {
+   "en": "Pristina",
+   "ru": "Приштина",
+   "sk": "Priština"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PSA": {
+  "city": "Pisa",
+  "country": "IT",
+  "lat": 43.6839,
+  "lon": 10.3925,
+  "names": {
+   "en": "Pisa",
+   "ru": "Пиза",
+   "sk": "Pisa"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PSR": {
+  "city": "Pescara",
+  "country": "IT",
+  "lat": 42.4372,
+  "lon": 14.1872,
+  "names": {
+   "en": "Pescara",
+   "ru": "Пескара",
+   "sk": "Pescara"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "PUJ": {
+  "city": "Punta Cana",
+  "country": "DO",
+  "lat": 18.5667,
+  "lon": -68.3519,
+  "names": {
+   "en": "Punta Cana",
+   "ru": "Пунта-Кана",
+   "sk": "Punta Cana"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "PVG": {
+  "city": "Shanghai",
+  "country": "CN",
+  "lat": 31.1433,
+  "lon": 121.8053,
+  "names": {
+   "en": "Shanghai",
+   "ru": "Шанхай",
+   "sk": "Šanghaj"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "PXO": {
+  "city": "Vila Baleira",
+  "country": "PT",
+  "lat": 33.0711,
+  "lon": -16.3495,
+  "names": {
+   "en": "Vila Baleira",
+   "ru": "Вила-Балейра"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "RAK": {
+  "city": "Marrakech",
+  "country": "MA",
+  "lat": 31.6086,
+  "lon": -8.0408,
+  "names": {
+   "en": "Marrakech",
+   "ru": "Марракеш",
+   "sk": "Murrákuš"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "RHO": {
+  "city": "Rhodes",
+  "country": "GR",
+  "lat": 36.4053,
+  "lon": 28.0861,
+  "names": {
+   "en": "Rhodes",
+   "ru": "Родос",
+   "sk": "Rodos"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "RIX": {
+  "city": "Riga",
+  "country": "LV",
+  "lat": 56.9208,
+  "lon": 23.9708,
+  "names": {
+   "en": "Riga",
+   "ru": "Рига",
+   "sk": "Riga"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "RMF": {
+  "city": "Marsa Alam",
+  "country": "EG",
+  "lat": 25.5569,
+  "lon": 34.5836,
+  "names": {
+   "en": "Marsa Alam",
+   "ru": "Марса-Алам",
+   "sk": "Marsa Alam"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "RMI": {
+  "city": "Rimini",
+  "country": "IT",
+  "lat": 44.0194,
+  "lon": 12.6094,
+  "names": {
+   "en": "Rimini",
+   "ru": "Римини",
+   "sk": "Rimini"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "RMO": {
+  "city": "Chișinău",
+  "country": "MD",
+  "lat": 46.9278,
+  "lon": 28.9308,
+  "names": {
+   "en": "Chișinău",
+   "ru": "Кишинёв",
+   "sk": "Kišiňov"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "RUH": {
+  "city": "Riyadh",
+  "country": "SA",
+  "lat": 24.9576,
+  "lon": 46.6988,
+  "names": {
+   "en": "Riyadh",
+   "ru": "Эр-Рияд",
+   "sk": "Rijád"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "RVN": {
+  "city": "Rovaniemi",
+  "country": "FI",
+  "lat": 66.5617,
+  "lon": 25.8308,
+  "names": {
+   "en": "Rovaniemi",
+   "ru": "Рованиеми",
+   "sk": "Rovaniemi"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "SAW": {
+  "city": "Istanbul",
+  "country": "TR",
+  "lat": 40.8983,
+  "lon": 29.3092,
+  "names": {
+   "en": "Istanbul",
+   "ru": "Стамбул",
+   "sk": "Istanbul"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SBZ": {
+  "city": "Sibiu",
+  "country": "RO",
+  "lat": 45.789,
+  "lon": 24.095,
+  "names": {
+   "en": "Sibiu",
+   "ru": "Сибиу",
+   "sk": "Sibiu"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "SCQ": {
+  "city": "Galicia",
+  "country": "ES",
+  "lat": 42.8963,
+  "lon": -8.4151,
+  "names": {
+   "en": "Galicia",
+   "ru": "Галисия",
+   "sk": "Galícia"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SCV": {
+  "city": "Suceava",
+  "country": "RO",
+  "lat": 47.6875,
+  "lon": 26.3542,
+  "names": {
+   "en": "Suceava",
+   "ru": "Сучава",
+   "sk": "Suceava"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "SHJ": {
+  "city": "Sharjah",
+  "country": "AE",
+  "lat": 25.3286,
+  "lon": 55.5172,
+  "names": {
+   "en": "Sharjah",
+   "ru": "Шарджа"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "SIN": {
+  "city": "Singapore",
+  "country": "SG",
+  "lat": 1.3592,
+  "lon": 103.9894,
+  "names": {
+   "en": "Singapore",
+   "ru": "Сингапур",
+   "sk": "Singapur"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SJJ": {
+  "city": "Sarajevo",
+  "country": "BA",
+  "lat": 43.8261,
+  "lon": 18.3374,
+  "names": {
+   "en": "Sarajevo",
+   "ru": "Сараево",
+   "sk": "Sarajevo"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "SKG": {
+  "city": "Thessaloniki",
+  "country": "GR",
+  "lat": 40.5197,
+  "lon": 22.9709,
+  "names": {
+   "en": "Thessaloniki",
+   "ru": "Салоники",
+   "sk": "Solún"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "SKP": {
+  "city": "Skopje",
+  "country": "MK",
+  "lat": 41.9611,
+  "lon": 21.6269,
+  "names": {
+   "en": "Skopje",
+   "ru": "Скопье",
+   "sk": "Skopje"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SNN": {
+  "city": "Limerick",
+  "country": "IE",
+  "lat": 52.7019,
+  "lon": -8.9247,
+  "names": {
+   "en": "Limerick",
+   "ru": "Лимерик",
+   "sk": "Limerick"
+  },
+  "tags": []
+ },
+ "SOF": {
+  "city": "Sofia",
+  "country": "BG",
+  "lat": 42.695,
+  "lon": 23.4083,
+  "names": {
+   "en": "Sofia",
+   "ru": "София",
+   "sk": "Sofia"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "SPU": {
+  "city": "Split",
+  "country": "HR",
+  "lat": 43.5389,
+  "lon": 16.2981,
+  "names": {
+   "en": "Split",
+   "ru": "Сплит",
+   "sk": "Split"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "SPX": {
+  "city": "Houston",
+  "country": "EG",
+  "lat": 29.5083,
+  "lon": -95.0514,
+  "names": {
+   "en": "Houston",
+   "ru": "Хьюстон",
+   "sk": "Houston"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SSH": {
+  "city": "Sharm el-Sheikh",
+  "country": "EG",
+  "lat": 27.9772,
+  "lon": 34.3947,
+  "names": {
+   "en": "Sharm el-Sheikh",
+   "ru": "Шарм-эш-Шейх",
+   "sk": "Šarm aš-Šajch"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "STN": {
+  "city": "London",
+  "country": "GB",
+  "lat": 51.885,
+  "lon": 0.235,
+  "names": {
+   "en": "London",
+   "ru": "Лондон",
+   "sk": "Londýn"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "STR": {
+  "city": "Stuttgart",
+  "country": "DE",
+  "lat": 48.6899,
+  "lon": 9.222,
+  "names": {
+   "en": "Stuttgart",
+   "ru": "Штутгарт",
+   "sk": "Stuttgart"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SUF": {
+  "city": "Lamezia Terme",
+  "country": "IT",
+  "lat": 38.9053,
+  "lon": 16.2422,
+  "names": {
+   "en": "Lamezia Terme",
+   "ru": "Ламеция-Терме",
+   "sk": "Lamezia Terme"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "SVQ": {
+  "city": "Seville",
+  "country": "ES",
+  "lat": 37.4181,
+  "lon": -5.8989,
+  "names": {
+   "en": "Seville",
+   "ru": "Севилья",
+   "sk": "Sevilla"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "SYX": {
+  "city": "Sanya",
+  "country": "CN",
+  "lat": 18.3029,
+  "lon": 109.4123,
+  "names": {
+   "en": "Sanya",
+   "ru": "Санья"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "SZX": {
+  "city": "Shenzhen",
+  "country": "CN",
+  "lat": 22.6394,
+  "lon": 113.8108,
+  "names": {
+   "en": "Shenzhen",
+   "ru": "Шэньчжэнь",
+   "sk": "Šen-čen"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "TBS": {
+  "city": "Tbilisi",
+  "country": "GE",
+  "lat": 41.6692,
+  "lon": 44.9547,
+  "names": {
+   "en": "Tbilisi",
+   "ru": "Тбилиси",
+   "sk": "Tbilisi"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "TFS": {
+  "city": "Santa Cruz de Tenerife",
+  "country": "ES",
+  "lat": 28.0444,
+  "lon": -16.5725,
+  "names": {
+   "en": "Santa Cruz de Tenerife",
+   "ru": "Санта-Крус-де-Тенерифе",
+   "sk": "Santa Cruz de Tenerife"
+  },
+  "tags": [
+   "sea",
+   "mountains"
+  ]
+ },
+ "TFU": {
+  "city": "Chengdu",
+  "country": "CN",
+  "lat": 30.319,
+  "lon": 104.445,
+  "names": {
+   "en": "Chengdu",
+   "ru": "Чэнду",
+   "sk": "Čcheng-tu"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "TGD": {
+  "city": "Podgorica",
+  "country": "ME",
+  "lat": 42.3594,
+  "lon": 19.2519,
+  "names": {
+   "en": "Podgorica",
+   "ru": "Подгорица",
+   "sk": "Podgorica"
+  },
+  "tags": [
+   "sea",
+   "mountains"
+  ]
+ },
+ "TGM": {
+  "city": "Târgu Mureș",
+  "country": "RO",
+  "lat": 46.4678,
+  "lon": 24.4125,
+  "names": {
+   "en": "Târgu Mureș",
+   "ru": "Тыргу-Муреш",
+   "sk": "Târgu Mureș"
+  },
+  "tags": []
+ },
+ "TIA": {
+  "city": "Tirana",
+  "country": "AL",
+  "lat": 41.4147,
+  "lon": 19.7206,
+  "names": {
+   "en": "Tirana",
+   "ru": "Тирана",
+   "sk": "Tirana"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "TLL": {
+  "city": "Tallinn",
+  "country": "EE",
+  "lat": 59.4164,
+  "lon": 24.7992,
+  "names": {
+   "en": "Tallinn",
+   "ru": "Таллин",
+   "sk": "Tallinn"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "TLS": {
+  "city": "Toulouse",
+  "country": "FR",
+  "lat": 43.635,
+  "lon": 1.3678,
+  "names": {
+   "en": "Toulouse",
+   "ru": "Тулуза",
+   "sk": "Toulouse"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "TLV": {
+  "city": "Jerusalem",
+  "country": "IL",
+  "lat": 32.0094,
+  "lon": 34.8828,
+  "names": {
+   "en": "Jerusalem",
+   "ru": "Иерусалим",
+   "sk": "Jeruzalem"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "TOS": {
+  "city": "Tromsø Municipality",
+  "country": "NO",
+  "lat": 69.6814,
+  "lon": 18.9178,
+  "names": {
+   "en": "Tromsø Municipality",
+   "ru": "Тромсё",
+   "sk": "Tromsø"
+  },
+  "tags": [
+   "mountains"
+  ]
+ },
+ "TPE": {
+  "city": "Taipei",
+  "country": "TW",
+  "lat": null,
+  "lon": null,
+  "names": {},
+  "tags": [
+   "sights"
+  ]
+ },
+ "TPS": {
+  "city": "Trapani",
+  "country": "IT",
+  "lat": 37.9119,
+  "lon": 12.4933,
+  "names": {
+   "en": "Trapani",
+   "ru": "Трапани",
+   "sk": "Trapani"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "TRN": {
+  "city": "Turin",
+  "country": "IT",
+  "lat": 45.2018,
+  "lon": 7.6496,
+  "names": {
+   "en": "Turin",
+   "ru": "Турин",
+   "sk": "Turín"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "TRS": {
+  "city": "Trieste",
+  "country": "IT",
+  "lat": 45.8212,
+  "lon": 13.4856,
+  "names": {
+   "en": "Trieste",
+   "ru": "Триест",
+   "sk": "Terst"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "TSF": {
+  "city": "Venice",
+  "country": "IT",
+  "lat": 45.6508,
+  "lon": 12.1978,
+  "names": {
+   "en": "Venice",
+   "ru": "Венеция",
+   "sk": "Benátky"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "TUN": {
+  "city": "Tunis",
+  "country": "TN",
+  "lat": 36.8511,
+  "lon": 10.2272,
+  "names": {
+   "en": "Tunis",
+   "ru": "Тунис",
+   "sk": "Tunis"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "TZL": {
+  "city": "Tuzla",
+  "country": "BA",
+  "lat": 44.4586,
+  "lon": 18.7248,
+  "names": {
+   "en": "Tuzla",
+   "ru": "Тузла",
+   "sk": "Tuzla"
+  },
+  "tags": []
+ },
+ "VAR": {
+  "city": "Varna",
+  "country": "BG",
+  "lat": 43.2319,
+  "lon": 27.8253,
+  "names": {
+   "en": "Varna",
+   "ru": "Варна",
+   "sk": "Varna"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "VCE": {
+  "city": "Venice",
+  "country": "IT",
+  "lat": 45.5053,
+  "lon": 12.3519,
+  "names": {
+   "en": "Venice",
+   "ru": "Венеция",
+   "sk": "Benátky"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "VIE": {
+  "city": "Vienna",
+  "country": "AT",
+  "lat": 48.1103,
+  "lon": 16.5697,
+  "names": {
+   "en": "Vienna",
+   "ru": "Вена",
+   "sk": "Viedeň"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "VLC": {
+  "city": "Valencia",
+  "country": "ES",
+  "lat": 39.4894,
+  "lon": -0.4817,
+  "names": {
+   "en": "Valencia",
+   "ru": "Валенсия",
+   "sk": "Valencia"
+  },
+  "tags": [
+   "sea",
+   "sights"
+  ]
+ },
+ "VNO": {
+  "city": "Vilnius",
+  "country": "LT",
+  "lat": 54.6369,
+  "lon": 25.2878,
+  "names": {
+   "en": "Vilnius",
+   "ru": "Вильнюс",
+   "sk": "Vilnius"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "VRN": {
+  "city": "Verona",
+  "country": "IT",
+  "lat": 45.3964,
+  "lon": 10.8881,
+  "names": {
+   "en": "Verona",
+   "ru": "Верона",
+   "sk": "Verona"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ },
+ "WAW": {
+  "city": "Warsaw",
+  "country": "PL",
+  "lat": 52.1658,
+  "lon": 20.9672,
+  "names": {
+   "en": "Warsaw",
+   "ru": "Варшава",
+   "sk": "Varšava"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "WMI": {
+  "city": "Warsaw",
+  "country": "PL",
+  "lat": 52.4511,
+  "lon": 20.6517,
+  "names": {
+   "en": "Warsaw",
+   "ru": "Варшава",
+   "sk": "Varšava"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "WRO": {
+  "city": "Wrocław",
+  "country": "PL",
+  "lat": 51.1028,
+  "lon": 16.8858,
+  "names": {
+   "en": "Wrocław",
+   "ru": "Вроцлав",
+   "sk": "Vroclav"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "XIY": {
+  "city": "Xi'an",
+  "country": "CN",
+  "lat": 34.4469,
+  "lon": 108.7514,
+  "names": {
+   "en": "Xi'an",
+   "ru": "Сиань",
+   "sk": "Si-an"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "YUL": {
+  "city": "Montreal",
+  "country": "CA",
+  "lat": 45.4706,
+  "lon": -73.7408,
+  "names": {
+   "en": "Montreal",
+   "ru": "Монреаль",
+   "sk": "Montreal"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "YYZ": {
+  "city": "Toronto",
+  "country": "CA",
+  "lat": 43.6767,
+  "lon": -79.6306,
+  "names": {
+   "en": "Toronto",
+   "ru": "Торонто",
+   "sk": "Toronto"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ZAD": {
+  "city": "Zadar",
+  "country": "HR",
+  "lat": 44.1083,
+  "lon": 15.3467,
+  "names": {
+   "en": "Zadar",
+   "ru": "Задар",
+   "sk": "Zadar"
+  },
+  "tags": [
+   "sea"
+  ]
+ },
+ "ZAG": {
+  "city": "Zagreb",
+  "country": "HR",
+  "lat": 45.7431,
+  "lon": 16.0689,
+  "names": {
+   "en": "Zagreb",
+   "ru": "Загреб",
+   "sk": "Záhreb"
+  },
+  "tags": [
+   "sights"
+  ]
+ },
+ "ZRH": {
+  "city": "Zurich",
+  "country": "CH",
+  "lat": 47.4581,
+  "lon": 8.5481,
+  "names": {
+   "en": "Zurich",
+   "ru": "Цюрих",
+   "sk": "Zürich"
+  },
+  "tags": [
+   "mountains",
+   "sights"
+  ]
+ }
+}

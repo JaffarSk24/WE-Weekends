@@ -423,6 +423,7 @@ class PrintTelegram:
 
 def main(argv: list[str]) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per request would flood the log
     cfg = config_module.load()
     db = Database(cfg.db_path)
     if len(argv) >= 2 and argv[0] == "--dry-run":

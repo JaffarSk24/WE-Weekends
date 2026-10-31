@@ -1,6 +1,6 @@
 # Security
 
-Please report vulnerabilities privately to info@whiteeagles.sk or through GitHub's "Report a vulnerability" on this repository. Do not open public issues for security problems. We answer within a few days.
+Please report vulnerabilities privately to welcome@whiteeagles.sk or through GitHub's "Report a vulnerability" on this repository. Do not open public issues for security problems. We answer within a few days.
 
 ## How the service is protected
 

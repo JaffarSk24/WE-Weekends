@@ -172,7 +172,7 @@ export const T = {
       'Кому передаём: никому. Поиск рейсов и отелей идёт без ваших личных данных.',
       'На этом сайте нет аналитики, рекламы и cookies. Ключ сессии хранится в вашем браузере, пока вы не выйдете.',
       'Удаление: кнопка «Удалить аккаунт» здесь или команда /delete в боте удаляет все ваши данные сразу.',
-      'Вопросы: info@whiteeagles.sk.',
+      'Вопросы: welcome@whiteeagles.sk.',
     ],
   },
   sk: {
@@ -344,7 +344,7 @@ export const T = {
       'Komu ich odovzdávame: nikomu. Vyhľadávanie letov a hotelov prebieha bez vašich osobných údajov.',
       'Táto stránka nemá analytiku, reklamu ani cookies. Kľúč relácie zostáva vo vašom prehliadači, kým sa neodhlásite.',
       'Vymazanie: tlačidlo „Vymazať účet“ tu alebo príkaz /delete v bote okamžite vymaže všetky vaše údaje.',
-      'Otázky: info@whiteeagles.sk.',
+      'Otázky: welcome@whiteeagles.sk.',
     ],
   },
   en: {
@@ -516,7 +516,7 @@ export const T = {
       'Who we share it with: nobody. Flight and hotel searches run without your personal data.',
       'This site has no analytics, no ads and no cookies. The session key stays in your browser until you sign out.',
       'Deletion: the "Delete account" button here or /delete in the bot erases all your data at once.',
-      'Questions: info@whiteeagles.sk.',
+      'Questions: welcome@whiteeagles.sk.',
     ],
   },
 };

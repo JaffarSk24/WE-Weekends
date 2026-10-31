@@ -12,7 +12,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import defusedxml.ElementTree as ET
 import httpx
@@ -63,7 +63,7 @@ class WowFeed:
         except Exception as exc:  # the feed is optional; never break the digest
             log.warning("wow feed failed: %s", type(exc).__name__)
             return []
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         out = []
         for entry in root.findall("a:entry", ATOM):
             try:

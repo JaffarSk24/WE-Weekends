@@ -1,0 +1,653 @@
+{
+ "ACE": [
+  "sea"
+ ],
+ "ACH": [
+  "mountains"
+ ],
+ "ADB": [
+  "sea"
+ ],
+ "ADD": [
+  "sights"
+ ],
+ "AGA": [
+  "sea"
+ ],
+ "AGP": [
+  "sea",
+  "sights"
+ ],
+ "AHO": [
+  "sea"
+ ],
+ "AJA": [
+  "sea",
+  "mountains"
+ ],
+ "ALA": [
+  "mountains",
+  "sights"
+ ],
+ "ALC": [
+  "sea"
+ ],
+ "ALG": [
+  "sea",
+  "sights"
+ ],
+ "AMM": [
+  "sights"
+ ],
+ "AMS": [
+  "sights"
+ ],
+ "ARN": [
+  "sights"
+ ],
+ "ASR": [
+  "mountains"
+ ],
+ "ATH": [
+  "sea",
+  "sights"
+ ],
+ "AUH": [
+  "sea",
+  "sights"
+ ],
+ "AYT": [
+  "sea"
+ ],
+ "BBU": [
+  "sights"
+ ],
+ "BCN": [
+  "sea",
+  "sights"
+ ],
+ "BEG": [
+  "sights"
+ ],
+ "BER": [
+  "sights"
+ ],
+ "BEY": [
+  "sea",
+  "sights"
+ ],
+ "BFS": [
+  "sights"
+ ],
+ "BGO": [
+  "mountains",
+  "sights"
+ ],
+ "BGY": [
+  "mountains",
+  "sights"
+ ],
+ "BHX": [
+  "sights"
+ ],
+ "BIO": [
+  "sea",
+  "sights"
+ ],
+ "BKK": [
+  "sights"
+ ],
+ "BLQ": [
+  "sights"
+ ],
+ "BNX": [
+  "sights"
+ ],
+ "BOD": [
+  "sights"
+ ],
+ "BOH": [
+  "sea"
+ ],
+ "BOS": [
+  "sights"
+ ],
+ "BRE": [
+  "sights"
+ ],
+ "BRI": [
+  "sea"
+ ],
+ "BRS": [
+  "sights"
+ ],
+ "BSL": [
+  "sights"
+ ],
+ "BUD": [
+  "sights"
+ ],
+ "BVA": [
+  "sights"
+ ],
+ "CAG": [
+  "sea"
+ ],
+ "CAI": [
+  "sights"
+ ],
+ "CAN": [
+  "sights"
+ ],
+ "CDT": [
+  "sea"
+ ],
+ "CFU": [
+  "sea"
+ ],
+ "CGN": [
+  "sights"
+ ],
+ "CHQ": [
+  "sea"
+ ],
+ "CIA": [
+  "sights"
+ ],
+ "CKG": [
+  "sights"
+ ],
+ "CPH": [
+  "sights"
+ ],
+ "CRL": [
+  "sights"
+ ],
+ "CTA": [
+  "sea",
+  "mountains"
+ ],
+ "DBV": [
+  "sea",
+  "sights"
+ ],
+ "DLM": [
+  "sea"
+ ],
+ "DOH": [
+  "sights"
+ ],
+ "DUB": [
+  "sights"
+ ],
+ "DUS": [
+  "sights"
+ ],
+ "DXB": [
+  "sea",
+  "sights"
+ ],
+ "EBL": [
+  "sights"
+ ],
+ "EDI": [
+  "sights"
+ ],
+ "EMA": [
+  "sights"
+ ],
+ "ESB": [
+  "sights"
+ ],
+ "EVN": [
+  "mountains",
+  "sights"
+ ],
+ "FAO": [
+  "sea"
+ ],
+ "FCO": [
+  "sights"
+ ],
+ "FLR": [
+  "sights"
+ ],
+ "FMM": [
+  "mountains"
+ ],
+ "FNC": [
+  "sea",
+  "mountains"
+ ],
+ "FRA": [
+  "sights"
+ ],
+ "FUE": [
+  "sea"
+ ],
+ "GDN": [
+  "sea",
+  "sights"
+ ],
+ "GHV": [
+  "mountains"
+ ],
+ "GLA": [
+  "sights"
+ ],
+ "GOT": [
+  "sights"
+ ],
+ "GVA": [
+  "mountains",
+  "sights"
+ ],
+ "GYD": [
+  "sea",
+  "sights"
+ ],
+ "HAM": [
+  "sights"
+ ],
+ "HAN": [
+  "sights"
+ ],
+ "HEL": [
+  "sights"
+ ],
+ "HER": [
+  "sea"
+ ],
+ "HND": [
+  "sights"
+ ],
+ "HRG": [
+  "sea"
+ ],
+ "IAD": [
+  "sights"
+ ],
+ "IBZ": [
+  "sea"
+ ],
+ "ICN": [
+  "sights"
+ ],
+ "IKA": [
+  "sights"
+ ],
+ "INN": [
+  "mountains",
+  "sights"
+ ],
+ "IST": [
+  "sights"
+ ],
+ "IVL": [
+  "mountains"
+ ],
+ "JED": [
+  "sea"
+ ],
+ "JFK": [
+  "sights"
+ ],
+ "KEF": [
+  "mountains",
+  "sights"
+ ],
+ "KLU": [
+  "mountains"
+ ],
+ "KRK": [
+  "mountains",
+  "sights"
+ ],
+ "KTT": [
+  "mountains"
+ ],
+ "KUT": [
+  "mountains",
+  "sights"
+ ],
+ "LAX": [
+  "sights"
+ ],
+ "LBA": [
+  "sights"
+ ],
+ "LCA": [
+  "sea"
+ ],
+ "LEJ": [
+  "sights"
+ ],
+ "LIL": [
+  "sights"
+ ],
+ "LIS": [
+  "sea",
+  "sights"
+ ],
+ "LPA": [
+  "sea"
+ ],
+ "LPL": [
+  "sights"
+ ],
+ "LTN": [
+  "sights"
+ ],
+ "LUX": [
+  "sights"
+ ],
+ "LYS": [
+  "sights"
+ ],
+ "MAD": [
+  "sights"
+ ],
+ "MAN": [
+  "sights"
+ ],
+ "MCT": [
+  "sea"
+ ],
+ "MLA": [
+  "sea",
+  "sights"
+ ],
+ "MLE": [
+  "sea"
+ ],
+ "MRS": [
+  "sea",
+  "sights"
+ ],
+ "MRU": [
+  "sea"
+ ],
+ "MST": [
+  "sights"
+ ],
+ "MUC": [
+  "mountains",
+  "sights"
+ ],
+ "MXP": [
+  "sights"
+ ],
+ "NAP": [
+  "sea",
+  "sights"
+ ],
+ "NCE": [
+  "sea",
+  "sights"
+ ],
+ "NCL": [
+  "sights"
+ ],
+ "NGB": [
+  "sights"
+ ],
+ "NQZ": [
+  "sights"
+ ],
+ "NTE": [
+  "sights"
+ ],
+ "NUE": [
+  "sights"
+ ],
+ "OHD": [
+  "mountains",
+  "sights"
+ ],
+ "OLB": [
+  "sea"
+ ],
+ "OPO": [
+  "sights"
+ ],
+ "ORD": [
+  "sights"
+ ],
+ "ORY": [
+  "sights"
+ ],
+ "OSL": [
+  "sights"
+ ],
+ "OTP": [
+  "sights"
+ ],
+ "PDL": [
+  "sea",
+  "mountains"
+ ],
+ "PEK": [
+  "sights"
+ ],
+ "PFO": [
+  "sea"
+ ],
+ "PMI": [
+  "sea"
+ ],
+ "PMO": [
+  "sea",
+  "sights"
+ ],
+ "POZ": [
+  "sights"
+ ],
+ "PRG": [
+  "sights"
+ ],
+ "PRN": [
+  "sights"
+ ],
+ "PSA": [
+  "sights"
+ ],
+ "PSR": [
+  "sea"
+ ],
+ "PUJ": [
+  "sea"
+ ],
+ "PVG": [
+  "sights"
+ ],
+ "PXO": [
+  "sea"
+ ],
+ "RAK": [
+  "mountains",
+  "sights"
+ ],
+ "RHO": [
+  "sea"
+ ],
+ "RIX": [
+  "sights"
+ ],
+ "RMF": [
+  "sea"
+ ],
+ "RMI": [
+  "sea"
+ ],
+ "RMO": [
+  "sights"
+ ],
+ "RUH": [
+  "sights"
+ ],
+ "RVN": [
+  "mountains"
+ ],
+ "SAW": [
+  "sights"
+ ],
+ "SBZ": [
+  "mountains",
+  "sights"
+ ],
+ "SCQ": [
+  "sights"
+ ],
+ "SCV": [
+  "mountains"
+ ],
+ "SHJ": [
+  "sea"
+ ],
+ "SIN": [
+  "sights"
+ ],
+ "SJJ": [
+  "mountains",
+  "sights"
+ ],
+ "SKG": [
+  "sea",
+  "sights"
+ ],
+ "SKP": [
+  "sights"
+ ],
+ "SOF": [
+  "mountains",
+  "sights"
+ ],
+ "SPU": [
+  "sea"
+ ],
+ "SPX": [
+  "sights"
+ ],
+ "SSH": [
+  "sea"
+ ],
+ "STN": [
+  "sights"
+ ],
+ "STR": [
+  "sights"
+ ],
+ "SUF": [
+  "sea"
+ ],
+ "SVQ": [
+  "sights"
+ ],
+ "SYX": [
+  "sea"
+ ],
+ "SZX": [
+  "sights"
+ ],
+ "TBS": [
+  "mountains",
+  "sights"
+ ],
+ "TFS": [
+  "sea",
+  "mountains"
+ ],
+ "TFU": [
+  "sights"
+ ],
+ "TGD": [
+  "sea",
+  "mountains"
+ ],
+ "TIA": [
+  "sea",
+  "sights"
+ ],
+ "TLL": [
+  "sights"
+ ],
+ "TLS": [
+  "sights"
+ ],
+ "TLV": [
+  "sea",
+  "sights"
+ ],
+ "TOS": [
+  "mountains"
+ ],
+ "TPE": [
+  "sights"
+ ],
+ "TPS": [
+  "sea"
+ ],
+ "TRN": [
+  "mountains",
+  "sights"
+ ],
+ "TRS": [
+  "sea",
+  "sights"
+ ],
+ "TSF": [
+  "sights"
+ ],
+ "TUN": [
+  "sea",
+  "sights"
+ ],
+ "VAR": [
+  "sea"
+ ],
+ "VCE": [
+  "sights"
+ ],
+ "VIE": [
+  "sights"
+ ],
+ "VLC": [
+  "sea",
+  "sights"
+ ],
+ "VNO": [
+  "sights"
+ ],
+ "VRN": [
+  "mountains",
+  "sights"
+ ],
+ "WAW": [
+  "sights"
+ ],
+ "WMI": [
+  "sights"
+ ],
+ "WRO": [
+  "sights"
+ ],
+ "XIY": [
+  "sights"
+ ],
+ "YUL": [
+  "sights"
+ ],
+ "YYZ": [
+  "sights"
+ ],
+ "ZAD": [
+  "sea"
+ ],
+ "ZAG": [
+  "sights"
+ ],
+ "ZRH": [
+  "mountains",
+  "sights"
+ ]
+}

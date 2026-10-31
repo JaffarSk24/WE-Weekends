@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -79,6 +79,14 @@ def booking_search_link(q: StayQuery) -> str:
     if filters:
         params.append(("nflt", ";".join(filters)))
     return "https://www.booking.com/searchresults.html?" + urlencode(params)
+
+
+def without_affiliate(url: str) -> str:
+    """WE Weekends takes no commissions: partner parameters are stripped from
+    every link before it reaches a user."""
+    parts = urlsplit(url)
+    query = [(k, v) for k, v in parse_qsl(parts.query) if k.lower() not in ("aid", "label", "sid", "affiliate_id")]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
 
 
 @lru_cache(maxsize=1)
@@ -197,5 +205,5 @@ class Hotels:
             price = (row.get("price") or {}).get("book")
             if price and (rating or 0) >= q.min_rating and (reviews or 0) >= q.min_reviews:
                 return Stay(name=row.get("name", ""), price=float(price), rating=rating, reviews=reviews,
-                            url=row.get("url") or booking_search_link(q), source="booking")
+                            url=without_affiliate(row.get("url") or booking_search_link(q)), source="booking")
         return None
