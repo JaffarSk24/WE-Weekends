@@ -177,3 +177,32 @@ def test_stats_only_for_owner(env):
     assert "active:" not in tg.sent[-1][1]
     run_update(app, message(OWNER, "/stats"))
     assert "active:" in tg.sent[-1][1]
+
+
+def _init_data(user_id, token, age=0, tamper=False):
+    import hashlib
+    import hmac
+    import json
+    import time
+    from urllib.parse import urlencode
+    fields = {"auth_date": str(int(time.time()) - age), "query_id": "AAE",
+              "user": json.dumps({"id": user_id, "first_name": "A", "language_code": "ru"}, separators=(",", ":"))}
+    check = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+    secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    fields["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+    if tamper:
+        fields["user"] = fields["user"].replace(str(user_id), str(user_id + 1))
+    return urlencode(fields)
+
+
+def test_telegram_webapp_sign_in(env):
+    client, _, app = env
+    bot_token = app.state.cfg.bot_token
+    res = client.post("/v1/auth/telegram", json={"init_data": _init_data(77, bot_token)})
+    assert res.status_code == 200, res.text
+    me = client.get("/v1/me", headers=auth(res.json()["token"])).json()
+    assert me["status"] == "active" and me["lang"] == "ru"
+    assert client.post("/v1/auth/telegram", json={"init_data": _init_data(77, bot_token, tamper=True)}).status_code == 400
+    assert client.post("/v1/auth/telegram", json={"init_data": _init_data(77, "999:" + "B" * 35)}).status_code == 400
+    assert client.post("/v1/auth/telegram", json={"init_data": _init_data(77, bot_token, age=7200)}).json()["error"] == "expired"
+    assert client.post("/v1/auth/telegram", json={"init_data": "hash=abc&user=x&auth_date=1"}).status_code == 400

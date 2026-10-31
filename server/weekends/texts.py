@@ -7,11 +7,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "welcome": (
             "<b>WE Weekends</b> присылает персональную подборку дешёвых поездок: выходные у моря и в горах, "
             "очень дешёвые билеты, горящие пакеты и цены на отели для отпуска.\n\n"
-            "Настроить, что и как часто присылать, можно на сайте. Вход на сайт тоже через этого бота.\n\n"
+            "Настройте, что и как часто присылать: кнопка «Открыть настройки» ниже или «Настройки» в меню. Это же можно сделать в браузере: https://jaffarsk24.github.io/WE-Weekends/\n\n"
             "Это только рекомендации: бронируете вы сами у авиакомпаний и отелей. Мы не турагентство, ничего не продаём "
             "и не получаем комиссий от партнёров. Сервис бесплатный."
         ),
         "open_site": "Открыть настройки",
+        "menu": "Настройки",
         "login_code": (
             "Код для входа на сайт WE Weekends: <code>{code}</code>\n\n"
             "Введите его на странице, с которой вы начали вход. Код действует 10 минут. "
@@ -41,11 +42,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "welcome": (
             "<b>WE Weekends</b> posiela osobný výber lacných ciest: víkendy pri mori a na horách, "
             "veľmi lacné letenky, last minute balíky a ceny hotelov na dovolenku.\n\n"
-            "Čo a ako často posielať, nastavíte na stránke. Prihlásenie na stránku ide tiež cez tohto bota.\n\n"
+            "Nastavte, čo a ako často posielať: tlačidlo „Otvoriť nastavenia“ nižšie alebo „Nastavenia“ v menu. To isté v prehliadači: https://jaffarsk24.github.io/WE-Weekends/\n\n"
             "Sú to len odporúčania: rezervujete si sami u leteckých spoločností a hotelov. Nie sme cestovná kancelária, nič "
             "nepredávame a od partnerov nedostávame provízie. Služba je zadarmo."
         ),
         "open_site": "Otvoriť nastavenia",
+        "menu": "Nastavenia",
         "login_code": (
             "Kód na prihlásenie do WE Weekends: <code>{code}</code>\n\n"
             "Zadajte ho na stránke, kde ste začali prihlásenie. Kód platí 10 minút. "
@@ -75,11 +77,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "welcome": (
             "<b>WE Weekends</b> sends a personal selection of cheap trips: weekends by the sea and in the mountains, "
             "very cheap flights, last-minute packages and hotel prices for your holiday.\n\n"
-            "Choose what to receive and how often on the website. You also sign in there through this bot.\n\n"
+            "Choose what to receive and how often: the \"Open settings\" button below or \"Settings\" in the menu. Or in a browser: https://jaffarsk24.github.io/WE-Weekends/\n\n"
             "These are only recommendations: you book directly with airlines and hotels yourself. We are not a travel "
             "agency, we sell nothing and take no commissions from partners. The service is free."
         ),
         "open_site": "Open settings",
+        "menu": "Settings",
         "login_code": (
             "Your WE Weekends sign-in code: <code>{code}</code>\n\n"
             "Enter it on the page where you started signing in. The code is valid for 10 minutes. "

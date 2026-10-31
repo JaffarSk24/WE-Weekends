@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import secrets
 import time
 from dataclasses import dataclass
+from urllib.parse import parse_qsl
 
 from .db import Database
 
@@ -130,6 +132,45 @@ class Auth:
                 )
         if failure:
             raise AuthError(failure)
+        return token, chat_id
+
+    def telegram_webapp(self, init_data: str, bot_token: str, max_age: int = 3600) -> tuple[str, int]:
+        """Sign-in from inside Telegram: the settings page opened from the bot's
+        menu gets init data signed with the bot token (Telegram Mini Apps).
+        The signature, its age and the user id are checked before a session
+        is issued; nothing else from the data is trusted."""
+        try:
+            fields = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=True))
+        except ValueError:
+            raise AuthError("invalid") from None
+        given = fields.pop("hash", "")
+        check = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+        secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
+        expected = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+        if not given or not hmac.compare_digest(expected, given):
+            raise AuthError("invalid")
+        now = int(time.time())
+        try:
+            auth_date = int(fields.get("auth_date", "0"))
+            user = json.loads(fields.get("user", "{}"))
+            chat_id = int(user["id"])
+        except (ValueError, KeyError, TypeError):
+            raise AuthError("invalid") from None
+        if not 0 <= now - auth_date <= max_age or chat_id <= 0 or user.get("is_bot"):
+            raise AuthError("expired")
+        lang = str(user.get("language_code") or "en")[:8]
+        token = secrets.token_urlsafe(32)
+        with self.db.tx() as con:
+            self._ensure_user(con, chat_id, "ru" if lang.startswith(("ru", "uk", "be", "kk")) else "sk" if lang.startswith(("sk", "cs")) else "en", now)
+            con.execute(
+                "INSERT INTO sessions (token_hash, chat_id, created_at, last_seen, expires_at) VALUES (?, ?, ?, ?, ?)",
+                (_h(token), chat_id, now, now, now + SESSION_TTL),
+            )
+            con.execute(
+                """DELETE FROM sessions WHERE chat_id = ? AND token_hash NOT IN (
+                       SELECT token_hash FROM sessions WHERE chat_id = ? ORDER BY last_seen DESC LIMIT ?)""",
+                (chat_id, chat_id, MAX_SESSIONS),
+            )
         return token, chat_id
 
     def _ensure_user(self, con, chat_id: int, lang: str, now: int) -> None:

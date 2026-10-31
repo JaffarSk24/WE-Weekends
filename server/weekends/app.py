@@ -24,7 +24,13 @@ from . import config as config_module
 from .auth import Auth, AuthError, Session
 from .bot import Bot
 from .db import Database
-from .models import DeleteRequest, PauseRequest, SaveRequest, VerifyRequest
+from .models import (
+    DeleteRequest,
+    PauseRequest,
+    SaveRequest,
+    TelegramAuthRequest,
+    VerifyRequest,
+)
 from .ratelimit import RateLimiter
 from .telegram import Telegram
 from .users import Users, VersionConflict
@@ -139,6 +145,17 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
             # Only fixed codes ever leave the server, never exception text.
             code = {"expired": "expired", "pending": "pending"}.get(str(exc), "invalid")
             return error(409 if code == "pending" else 400, code)
+        return {"token": token}
+
+    @app.post("/v1/auth/telegram")
+    def auth_telegram(request: Request, body: TelegramAuthRequest):
+        if not limiter.allow("auth_verify", client_ip(request)):
+            return error(429, "rate_limited")
+        try:
+            token, _ = auth.telegram_webapp(body.init_data, cfg.bot_token)
+        except AuthError as exc:
+            code = {"expired": "expired"}.get(str(exc), "invalid")
+            return error(400, code)
         return {"token": token}
 
     @app.get("/v1/me")

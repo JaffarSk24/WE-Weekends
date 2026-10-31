@@ -42,7 +42,12 @@ class Bot:
         return user["lang"] if user else lang_of(sender.get("language_code"))
 
     def _site_button(self, lang: str) -> list[list[dict]]:
-        return [[{"text": t(lang, "open_site"), "url": f"{self.cfg.web_url}?lang={lang}"}]]
+        # Opens the settings inside Telegram, where the page signs in by itself.
+        return [[{"text": t(lang, "open_site"), "web_app": {"url": f"{self.cfg.web_url}?lang={lang}"}}]]
+
+    def _menu_button(self, chat_id: int, lang: str) -> None:
+        self.tg.call("setChatMenuButton", chat_id=chat_id, menu_button={
+            "type": "web_app", "text": t(lang, "menu"), "web_app": {"url": f"{self.cfg.web_url}?lang={lang}"}})
 
     def _message(self, msg: dict) -> None:
         chat = msg.get("chat") or {}
@@ -71,6 +76,7 @@ class Bot:
             return
         if command in ("start", "settings"):
             self.tg.send(chat_id, t(lang, "welcome"), self._site_button(lang))
+            self._menu_button(chat_id, lang)
             return
         if command in ("pause", "resume"):
             ok = self.users.set_paused(chat_id, command == "pause")
@@ -136,6 +142,7 @@ class Bot:
             new = data[5:]
             self.users.set_lang(chat_id, new)
             self._edit(chat_id, message_id, t(new, "language_set"))
+            self._menu_button(chat_id, new)
 
     def _edit(self, chat_id: int, message_id: Any, text: str) -> None:
         if isinstance(message_id, int):

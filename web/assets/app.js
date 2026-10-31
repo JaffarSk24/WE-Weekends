@@ -721,8 +721,29 @@ async function start() {
     return;
   }
   if (document.body.dataset.page === 'privacy') { renderPrivacy(); return; }
+  await telegramSignIn();
   render();
   await loadMe();
+}
+
+// Opened from the bot's menu inside Telegram: the page gets init data signed
+// with the bot token in the URL fragment, and the server turns it into a
+// session, so no code is needed. No Telegram script is loaded for this.
+async function telegramSignIn() {
+  const data = new URLSearchParams(location.hash.slice(1)).get('tgWebAppData');
+  if (!data) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  telegramEvent('web_app_ready');
+  telegramEvent('web_app_expand');
+  const res = await api('POST', '/v1/auth/telegram', { init_data: data });
+  if (res.ok && typeof res.data.token === 'string') store.set('localStorage', TOKEN_KEY, res.data.token);
+}
+
+function telegramEvent(name) {
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(name, '');
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: name, eventData: '' }), 'https://web.telegram.org');
+  } catch { /* not inside Telegram */ }
 }
 
 function renderPrivacy() {

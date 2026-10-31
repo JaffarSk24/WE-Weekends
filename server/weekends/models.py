@@ -331,6 +331,10 @@ class VerifyRequest(Strict):
     code: Annotated[str, StringConstraints(pattern=r"^\d{6}$")]
 
 
+class TelegramAuthRequest(Strict):
+    init_data: Annotated[str, StringConstraints(min_length=20, max_length=4096)]
+
+
 class PauseRequest(Strict):
     paused: bool
 
