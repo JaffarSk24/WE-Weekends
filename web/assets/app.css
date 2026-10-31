@@ -140,6 +140,13 @@ select { min-width: 12em; }
 .hotel-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .hotel-list .tag a { color: var(--link); text-decoration: none; text-transform: capitalize; }
 .hotel-list .tag a:hover { text-decoration: underline; }
+.hotel-list { flex-direction: column; align-items: stretch; gap: 10px; }
+.hotel-row { display: grid; gap: 6px; justify-items: start; }
+.hotel-status { margin: 0; font-size: 14px; color: var(--text-soft); }
+.hotel-status.found { color: var(--ok); }
+.hotel-status.not_found { color: var(--warn); }
+.hotel-fix { display: grid; gap: 6px; width: 100%; max-width: 560px; }
+.hotel-fix input { width: 100%; }
 
 .block { border-top: 1px solid var(--border); padding-top: 6px; margin-top: 12px; }
 .block:first-of-type { border-top: 0; margin-top: 0; }

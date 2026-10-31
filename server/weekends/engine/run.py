@@ -28,11 +28,12 @@ from ..telegram import Telegram
 from . import digest as dg
 from .calendar import UserCalendar
 from .entry import allowed, status
-from .hotels import Hotels, StayQuery
+from .hotels import Hotels, StayQuery, tripadvisor_keys
 from .kiwi import Itinerary, Kiwi, kdate
 from .places import Exclusions
 from .score import Candidate, evaluate, score
 from .store import Store
+from .tracked import Tracked, nearest
 from .weather import WeatherSource
 from .wow import WowFeed
 
@@ -69,6 +70,15 @@ def allowed_countries(s: dict) -> dict[str, str]:
     return out
 
 
+def _flight_cost(f: Itinerary) -> float:
+    """Price plus a penalty for a late outbound or an early return, so a
+    flight that keeps the first and the last day wins when it costs a little
+    more."""
+    late_out = f.depart.hour >= 12
+    early_back = 3 <= f.ret_depart.hour < 17
+    return f.price + 60 * late_out + 60 * early_back
+
+
 def party_of(s: dict, mode: str) -> tuple[int, int, int, tuple[int, ...]]:
     """(adults, children 2-11, infants, ages of everyone under 18)."""
     if mode != "family":
@@ -91,6 +101,7 @@ class Engine:
         self.weather = WeatherSource(db)
         self.store = Store(db)
         self.wow = WowFeed()
+        self.tracked = Tracked(db)
         self.pool: dict[str, dict[str, Itinerary]] = defaultdict(dict)
         self.searched: set[tuple[str, str]] = set()
         self.pool_day: date | None = None
@@ -269,19 +280,74 @@ class Engine:
         chosen.sort(key=lambda c: (c.penalty, c.total))
         return chosen
 
+    def _geos_for(self, country: str) -> list[str]:
+        """TripAdvisor areas of the destination cities of one country."""
+        keys = tripadvisor_keys()
+        return [keys[code] for code, d in destinations().items() if d.get("country", "").lower() == country and code in keys]
+
+    def _tracked_flight(self, s: dict, airport: str, country: str, start: date, end: date, party: tuple[int, int, int]) -> Itinerary | None:
+        adults, children, infants = party
+        best = None
+        for origin in s["profile"]["origins"]:
+            for f in self.kiwi.search(country.upper(), flyFrom=origin, flyTo=airport, departureDate=kdate(start), returnDate=kdate(end),
+                                      adults=adults, children=children, infants=infants,
+                                      adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults):
+                if f.dest == airport and (best is None or _flight_cost(f) < _flight_cost(best)):
+                    best = f
+        return best
+
     def vacation(self, s: dict, lang: str, today: date) -> list[str]:
         v = s["blocks"]["vacation"]
         t = dg.TX[lang]
         ex = Exclusions(s["geography"]["exclude_places"])
         mode = "family" if v["party"] == "family" and s["budgets"]["family"]["enabled"] else "solo"
         adults, children, infants, ages = party_of(s, mode)
+        guests = adults + len(ages)
+        matches = []
+        for url in v["hotels"]:
+            if ex.hits(url.rsplit("/", 1)[-1].replace("-", " ")):
+                continue
+            country = url.split("/hotel/", 1)[-1][:2]
+            matches.append(self.tracked.resolve(url, v["hotel_names"].get(url, ""), self._geos_for(country)))
         blocks = []
         for opt in v["date_options"]:
             start, end = date.fromisoformat(opt["start"]), date.fromisoformat(opt["end"])
             if start <= today:
                 continue
+            nights = (end - start).days
             who = (t["family"] + dg.party(lang, adults, len(ages))) if mode == "family" else t["solo"]
             lines = [f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"]
+            booking_q = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
+            for m in matches:
+                link = dg.e(m.url + booking_q)
+                if m.status != "found":
+                    slug = m.url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ").title()
+                    lines.append(t["vac_hotel_unknown"].format(url=link, name=dg.e(slug)))
+                    continue
+                priced = self.tracked.price(m.key, start.isoformat(), end.isoformat(), guests, nights)
+                rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews)
+                if priced is None:
+                    lines.append(t["vac_hotel_noprice"].format(url=link, name=dg.e(m.name), rating=dg.e(rating)))
+                    continue
+                total, source, booking_total = priced
+                usual = self.store.usual_price(f"hotel:{m.key}:{guests}", f"{start}:{end}")
+                self.store.record_price(f"hotel:{m.key}:{guests}", f"{start}:{end}", today.isoformat(), total)
+                line = t["vac_hotel"].format(url=link, name=dg.e(m.name), rating=dg.e(rating), p=total, n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(source))
+                if booking_total:
+                    line += t["vac_booking"].format(p=booking_total)
+                if usual and total < usual * 0.97:
+                    line += t["cheaper"].format(x=round(100 * (1 - total / usual)))
+                lines.append(line)
+                airport = nearest(m.lat, m.lon, {c: d for c, d in destinations().items() if d.get("country", "").lower() == m.url.split("/hotel/", 1)[-1][:2]}) if m.lat is not None else None
+                if airport:
+                    f = self._tracked_flight(s, airport, m.url.split("/hotel/", 1)[-1][:2], start, end, (adults, children, infants))
+                    if f:
+                        url = f.url if f.url.startswith("https://") else "https://www.kiwi.com/"
+                        lines.append(t["vac_flight"].format(url=dg.e(url), air=dg.e(f.airline), dest=dg.e(f.dest),
+                                                            o=dg.e(f"{f.depart:%H:%M}"), r=dg.e(f"{f.ret_depart:%H:%M}"), p=round(f.price)))
+                        lines.append(t["vac_total"].format(t=round(total + f.price)))
+                    else:
+                        lines.append(t["vac_no_direct"].format(dest=dg.e(airport)))
             flights = []
             for origin in s["profile"]["origins"]:
                 for country in v["countries"]:
@@ -293,6 +359,8 @@ class Engine:
             cheapest: dict[str, Itinerary] = {}
             for f in flights:  # one line per destination, from whichever airport is cheaper
                 cheapest.setdefault(f.dest, f)
+            if cheapest:
+                lines.append(t["vac_flights"])
             for f in list(cheapest.values())[:MAX_ITEMS["vacation"]]:
                 name = city_name(f.dest, f.city, lang)
                 url = f.url if f.url.startswith("https://") else "https://www.kiwi.com/"
@@ -300,15 +368,9 @@ class Engine:
                              f"{dg.e(dg.when(lang, f.depart))} / {dg.e(dg.when(lang, f.ret_depart))} · <b>{round(f.price)}€</b>")
             if v["countries"] and not flights:
                 lines.append(t["vac_no_flights"])
-            hotels = [u for u in v["hotels"] if not ex.hits(u.rsplit("/", 1)[-1].replace("-", " "))]
-            if hotels:
-                lines.append(t["vac_hotels"])
-                for url in hotels:
-                    slug = url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ")
-                    params = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR"
-                    params += "".join(f"&age={a}" for a in ages)
-                    lines.append(f'🏨 <a href="{dg.e(url + params)}">{dg.e(slug.title())}</a>')
             blocks.append("\n".join(lines))
+        if blocks and v["suggest"]["enabled"]:
+            blocks[-1] += "\n\n" + t["vac_suggest_off"]
         return blocks
 
     def build(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> tuple[list[tuple[str, list[list[dict]] | None]], list[tuple[str, float]]]:

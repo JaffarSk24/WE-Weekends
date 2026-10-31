@@ -557,14 +557,27 @@ function settingsView() {
       paintHotels();
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    const row = (url, i) => {
+      const st = hotelStatus[url];
+      const status = h('p', { class: `hotel-status ${st ? st.status : 'pending'}` });
+      if (!st || st.status === 'pending') status.textContent = t('hotel_pending');
+      else if (st.status === 'found') status.textContent = fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 });
+      const alias = h('input', { type: 'text', maxlength: 100, value: vac.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
+        oninput: (e) => { const v = e.target.value.replace(/[<>]/g, ''); if (v.trim()) vac.hotel_names[url] = v; else delete vac.hotel_names[url]; markDirty(); } });
+      return h('div', { class: 'hotel-row' },
+        h('span', { class: 'tag' },
+          h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
+          h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { vac.hotels.splice(i, 1); delete vac.hotel_names[url]; paintHotels(); markDirty(); } }, '×')),
+        st && st.status === 'not_found' ? h('div', { class: 'hotel-fix' }, h('p', { class: 'hotel-status not_found' }, t('hotel_not_found')), alias) : status);
+    };
     hotels.replaceChildren(
-      vac.hotels.length ? h('div', { class: 'hotel-list' }, ...vac.hotels.map((url, i) => h('span', { class: 'tag' },
-        h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
-        h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { vac.hotels.splice(i, 1); paintHotels(); markDirty(); } }, '×')))) : '',
+      vac.hotels.length ? h('div', { class: 'hotel-list' }, ...vac.hotels.map(row)) : '',
       vac.hotels.length < 10 ? h('div', { class: 'url-row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '',
       vac.hotels.length < 10 ? h('p', { class: 'hint example' }, t('hotel_example'), ' ', h('code', {}, 'https://www.booking.com/hotel/tr/lonicera-resort-spa.html')) : '', msg);
   };
   paintHotels();
+  refreshHotels(paintHotels);
+  hotelsRefresh = () => refreshHotels(paintHotels);
   const sug = vac.suggest;
   const sugBox = h('div', { class: 'sub', hidden: !sug.enabled },
     h('div', { class: 'two' },
@@ -657,6 +670,21 @@ function settingsView() {
   return view;
 }
 
+// Whether each tracked hotel was found for prices. The server looks a new
+// hotel up in the background; the page asks again until it is done.
+const hotelStatus = {};
+let hotelTimer = null;
+let hotelsRefresh = null;
+async function refreshHotels(paint, tries = 0) {
+  clearTimeout(hotelTimer);
+  if (!draft || !draft.blocks.vacation.hotels.length) return;
+  const res = await api('GET', '/v1/hotels');
+  if (!res.ok || !Array.isArray(res.data.hotels)) return;
+  for (const st of res.data.hotels) hotelStatus[st.url] = st;
+  paint();
+  if (res.data.hotels.some((st) => st.status === 'pending') && tries < 36) hotelTimer = setTimeout(() => refreshHotels(paint, tries + 1), 5000);
+}
+
 function normalizeBooking(value) {
   try {
     const url = new URL(value.trim());
@@ -704,6 +732,7 @@ async function save() {
     saved = JSON.stringify(draft);
     bar.button.textContent = t('save');
     paintBar();
+    if (hotelsRefresh) hotelsRefresh();
     return;
   }
   if (res.status === 409) { window.alert(t('err_conflict')); await loadMe(); return; }

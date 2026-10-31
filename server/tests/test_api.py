@@ -214,3 +214,21 @@ def test_language_is_saved_on_its_own(env):
     assert client.post("/v1/lang", json={"lang": "sk"}, headers=auth(token)).status_code == 200
     assert client.get("/v1/me", headers=auth(token)).json()["lang"] == "sk"
     assert client.post("/v1/lang", json={"lang": "de"}, headers=auth(token)).status_code == 422
+
+
+def test_hotel_status_lists_tracked_hotels(env, monkeypatch):
+    from weekends.engine import tracked as tr
+    monkeypatch.setattr(tr.Tracked, "resolve", lambda self, url, alias="", geos=None: tr.Match(url=url, status="not_found"))
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers=auth(token)).json()["settings"]
+    url = "https://www.booking.com/hotel/tr/letoonia-golf-resort.html"
+    s["blocks"]["vacation"]["hotels"] = [url]
+    s["blocks"]["vacation"]["hotel_names"] = {url: "Selectum Family Resort Belek", "https://www.booking.com/hotel/tr/other.html": "x"}
+    assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers=auth(token)).status_code == 200
+    saved = client.get("/v1/me", headers=auth(token)).json()["settings"]["blocks"]["vacation"]["hotel_names"]
+    assert saved == {url: "Selectum Family Resort Belek"}
+    res = client.get("/v1/hotels", headers=auth(token)).json()["hotels"]
+    assert res[0]["url"] == url and res[0]["status"] in ("pending", "not_found")
+    s["blocks"]["vacation"]["hotel_names"] = {url: "<script>"}
+    assert client.put("/v1/settings", json={"version": 1, "lang": "ru", "settings": s}, headers=auth(token)).status_code == 422

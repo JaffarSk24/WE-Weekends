@@ -278,13 +278,24 @@ class Suggest(Strict):
 
 
 class Vacation(Block):
+    @model_validator(mode="after")
+    def _names(self) -> Vacation:
+        return _vacation_names(self)
+
     enabled: bool = False
     freq: Freq = "weekly"
     party: Literal["solo", "family"] = "family"
     date_options: Annotated[list[DateRange], Field(max_length=4)] = []
     countries: Annotated[list[ISO2], Field(max_length=30), AfterValidator(_unique)] = []
     hotels: Annotated[list[BookingUrl], Field(max_length=10), AfterValidator(_unique)] = []
+    # The hotel's current name, for when Booking renamed it but kept the address.
+    hotel_names: Annotated[dict[str, Annotated[str, StringConstraints(max_length=100, pattern=r"^[^<>\x00-\x1f]*$")]], Field(max_length=10)] = {}
     suggest: Suggest = Suggest()
+
+
+def _vacation_names(v: Vacation) -> Vacation:
+    v.hotel_names = {url: name for url, name in v.hotel_names.items() if url in v.hotels and name.strip()}
+    return v
 
 
 class Blocks(Strict):

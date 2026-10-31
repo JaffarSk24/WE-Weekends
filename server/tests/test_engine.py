@@ -183,6 +183,18 @@ def test_engine_end_to_end(env):
     bad = itin(f"{fri}T07:00", f"{fri + timedelta(days=3)}T15:00", price=20, dest="BGY")  # loses two workdays
     vac = itin("2027-05-24T06:00", "2027-06-04T22:00", price=300, dest="BRI")
     engine.kiwi = FakeKiwi([good, bad, vac])
+
+    class FakeTracked:
+        def resolve(self, url, alias="", geos=None):
+            from weekends.engine.tracked import Match
+            if "lonicera" in url:
+                return Match(url=url, status="found", key="g1-d2", name="Lonicera Resort & Spa Hotel", rating=4.4, reviews=2500, lat=36.6, lon=31.8)
+            return Match(url=url, status="not_found")
+
+        def price(self, key, checkin, checkout, guests, nights):
+            return (3531, "Booking.com", None)
+
+    engine.tracked = FakeTracked()
     users = engine.users()
     assert users and users[0][0] == 42
     engine.ensure_searches(users, date.today())
@@ -191,7 +203,7 @@ def test_engine_end_to_end(env):
     text = "\n".join(m[1] for m in tg.sent[before:])
     assert "NAP" in text and "BGY" not in text
     assert "семья" in text and "135€" in text  # family price: 45 x 3 people
-    assert "Lonicera Resort Spa" in text and "checkin=2027-05-24" in text
+    assert "Lonicera Resort &amp; Spa Hotel" in text and "≈3531€" in text and "checkin=2027-05-24" in text
     assert "бронируете вы сами" in text
     buttons = [b for m in tg.sent[before:] for row in (m[2] or []) for b in row]
     assert any(b["callback_data"].startswith("r:") for b in buttons)
@@ -225,3 +237,13 @@ def test_excluded_places_are_validated(env):
     assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 200
     s["geography"]["exclude_places"] = ["atlantis"]
     assert client.put("/v1/settings", json={"version": 1, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 422
+
+
+def test_tracked_hotel_matching():
+    from weekends.engine.tracked import similarity, slug_words
+    country, slug = slug_words("https://www.booking.com/hotel/tr/lonicera-resort-spa.html")
+    assert country == "tr"
+    assert similarity(slug, "Lonicera Resort & Spa Hotel") >= 0.99
+    assert similarity(slug, "Lonicera World Hotel") < 0.75
+    assert similarity(slug_words("https://www.booking.com/hotel/tr/letoonia-golf-resort.html")[1], "Selectum Family Resort Belek") == 0
+    assert similarity(["selectum", "family", "resort", "belek"], "Selectum Family Resort Belek") >= 0.99

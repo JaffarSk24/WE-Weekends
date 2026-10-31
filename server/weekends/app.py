@@ -24,6 +24,9 @@ from . import config as config_module
 from .auth import Auth, AuthError, Session
 from .bot import Bot
 from .db import Database
+from .engine.hotels import tripadvisor_keys
+from .engine.run import destinations
+from .engine.tracked import Tracked
 from .models import (
     DeleteRequest,
     LangRequest,
@@ -189,6 +192,50 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
             return session
         users.set_paused(session.chat_id, body.paused)
         return {"paused": body.paused}
+
+    tracked = Tracked(db)
+    pending: set[tuple[str, str]] = set()
+    pending_lock = threading.Lock()
+
+    def resolve_in_background(url: str, alias: str) -> None:
+        def work():
+            try:
+                country = url.split("/hotel/", 1)[-1][:2]
+                keys = tripadvisor_keys()
+                geos = [keys[c] for c, d in destinations().items() if d.get("country", "").lower() == country and c in keys]
+                tracked.resolve(url, alias, geos)
+            except Exception:
+                log.exception("hotel lookup failed")
+            finally:
+                with pending_lock:
+                    pending.discard((url, alias))
+        with pending_lock:
+            if (url, alias) in pending or len(pending) >= 3:
+                return
+            pending.add((url, alias))
+        threading.Thread(target=work, daemon=True).start()
+
+    @app.get("/v1/hotels")
+    def hotels_status(request: Request):
+        """Whether each tracked hotel was found for prices; a lookup starts in
+        the background for hotels not checked yet."""
+        session = require_session(request)
+        if isinstance(session, JSONResponse):
+            return session
+        user = users.get(session.chat_id)
+        if user is None:
+            return error(401, "unauthorized")
+        vac = user["settings"]["blocks"]["vacation"]
+        out = []
+        for url in vac["hotels"]:
+            alias = vac["hotel_names"].get(url, "")
+            m = tracked.stored(url, alias)
+            if m is None:
+                resolve_in_background(url, alias)
+                out.append({"url": url, "status": "pending"})
+            else:
+                out.append({"url": url, "status": m.status, "name": m.name, "rating": m.rating, "reviews": m.reviews})
+        return {"hotels": out}
 
     @app.post("/v1/lang")
     def set_lang(request: Request, body: LangRequest):
