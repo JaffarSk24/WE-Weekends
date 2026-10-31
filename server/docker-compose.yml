@@ -1,0 +1,41 @@
+# Runs behind nginx on the same host, reachable only on 127.0.0.1:8790.
+# Tight limits keep it from ever competing with the websites on this server.
+# Run from this folder: docker compose up -d --build
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: we-weekends:local
+    container_name: we-weekends
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_PATH: /data/weekends.sqlite
+    ports:
+      - "127.0.0.1:8790:8790"
+    volumes:
+      - weekends-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: 0.5
+    cpu_shares: 256
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8790/v1/health', timeout=3).status == 200 else 1)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  weekends-data:

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server tests and security checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - run: pip install --require-hashes -r requirements.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check --select E,F,W,B,S,UP,I --ignore E501,S101,S104 weekends tests
+      - run: bandit -q -r weekends
+      - run: pip-audit -r requirements.txt --strict
+      - run: pytest -q -p no:warnings tests
+
+  web:
+    name: Web page checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: No innerHTML, eval or inline handlers in the page code
+        run: |
+          ! grep -nE 'innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function' web/assets/*.js
+          ! grep -nE ' on[a-z]+="' web/*.html
+      - name: Every page carries the Content-Security-Policy
+        run: for f in web/*.html; do grep -q 'Content-Security-Policy' "$f" || { echo "$f has no CSP"; exit 1; }; done
+      - name: Syntax
+        run: for f in web/assets/*.js; do node --check "$f"; done
