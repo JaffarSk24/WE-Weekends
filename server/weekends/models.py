@@ -335,6 +335,10 @@ class TelegramAuthRequest(Strict):
     init_data: Annotated[str, StringConstraints(min_length=20, max_length=4096)]
 
 
+class LangRequest(Strict):
+    lang: Lang
+
+
 class PauseRequest(Strict):
     paused: bool
 

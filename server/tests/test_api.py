@@ -206,3 +206,11 @@ def test_telegram_webapp_sign_in(env):
     assert client.post("/v1/auth/telegram", json={"init_data": _init_data(77, "999:" + "B" * 35)}).status_code == 400
     assert client.post("/v1/auth/telegram", json={"init_data": _init_data(77, bot_token, age=7200)}).json()["error"] == "expired"
     assert client.post("/v1/auth/telegram", json={"init_data": "hash=abc&user=x&auth_date=1"}).status_code == 400
+
+
+def test_language_is_saved_on_its_own(env):
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    assert client.post("/v1/lang", json={"lang": "sk"}, headers=auth(token)).status_code == 200
+    assert client.get("/v1/me", headers=auth(token)).json()["lang"] == "sk"
+    assert client.post("/v1/lang", json={"lang": "de"}, headers=auth(token)).status_code == 422

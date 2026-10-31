@@ -44,5 +44,5 @@ jobs:
         run: python3 scripts/check_text.py
       - name: Every page carries the Content-Security-Policy
         run: for f in web/*.html; do grep -q 'Content-Security-Policy' "$f" || { echo "$f has no CSP"; exit 1; }; done
-      - name: Syntax
-        run: for f in web/assets/*.js; do node --check "$f"; done
+      - name: Syntax (the page scripts are ES modules)
+        run: for f in web/assets/*.js; do cp "$f" "$RUNNER_TEMP/check.mjs" && node --check "$RUNNER_TEMP/check.mjs" || exit 1; done

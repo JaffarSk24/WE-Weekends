@@ -26,6 +26,7 @@ from .bot import Bot
 from .db import Database
 from .models import (
     DeleteRequest,
+    LangRequest,
     PauseRequest,
     SaveRequest,
     TelegramAuthRequest,
@@ -188,6 +189,14 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
             return session
         users.set_paused(session.chat_id, body.paused)
         return {"paused": body.paused}
+
+    @app.post("/v1/lang")
+    def set_lang(request: Request, body: LangRequest):
+        session = require_session(request)
+        if isinstance(session, JSONResponse):
+            return session
+        users.set_lang(session.chat_id, body.lang)
+        return {"lang": body.lang}
 
     @app.post("/v1/logout")
     def logout(request: Request):

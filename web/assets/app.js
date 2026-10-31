@@ -122,7 +122,10 @@ function setLang(code) {
   url.searchParams.set('lang', code);
   history.replaceState(null, '', url);
   if (document.body.dataset.page === 'privacy') { renderPrivacy(); return; }
-  if (draft) markDirty();
+  if (me && me.lang !== code) {
+    // The bot writes in the page's language: keep it in step right away.
+    api('POST', '/v1/lang', { lang: code }).then((res) => { if (res.ok) me.lang = code; });
+  }
   render();
 }
 
@@ -283,7 +286,7 @@ function toggle(obj, key, label, onchange) {
 }
 
 function chips(list, options, { min = 0, max = Infinity } = {}) {
-  return h('div', { class: 'chips' }, options.map(([value, label]) => {
+  return h('div', { class: `chips chips-${options.length}` }, options.map(([value, label]) => {
     const btn = h('button', { type: 'button', class: 'chip', 'aria-pressed': String(list.includes(value)) }, label);
     btn.addEventListener('click', () => {
       const i = list.indexOf(value);
@@ -297,7 +300,7 @@ function chips(list, options, { min = 0, max = Infinity } = {}) {
 }
 
 function segmented(obj, key, options, onchange) {
-  const wrap = h('div', { class: 'segmented', role: 'radiogroup' });
+  const wrap = h('div', { class: `segmented seg-${options.length}`, role: 'radiogroup' });
   const paint = () => wrap.querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-checked', String(obj[key] === options[i][0])));
   options.forEach(([value, label]) => wrap.append(h('button', {
     type: 'button', role: 'radio', onclick: () => { obj[key] = value; paint(); markDirty(); if (onchange) onchange(); },
@@ -481,10 +484,11 @@ function settingsView() {
       group(t('include'), countryPicker(s.geography.include, 250)),
       group(t('exclude'), countryPicker(s.geography.exclude, 250))),
     group(t('exclude_places'), placePicker(s.geography.exclude_places, 50), t('exclude_places_hint')),
-    group(t('s_trip'), h('div', { class: 'inline' },
-      h('span', {}, t('nights_min')), stepper(s.trip, 'nights_min', 1, 7, t('nights_min')),
-      h('span', {}, t('nights_max')), stepper(s.trip, 'nights_max', 1, 14, t('nights_max')))),
-    group(t('horizon'), segmented(s.trip, 'horizon_days', [[30, '30'], [60, '60'], [90, '90'], [120, '120'], [180, '180']].map(([v, l]) => [v, fmt('days_n', { n: l })]))));
+    h('h3', {}, t('s_trip')),
+    h('div', { class: 'two compact' },
+      group(t('nights_min'), stepper(s.trip, 'nights_min', 1, 7, t('nights_min'))),
+      group(t('nights_max'), stepper(s.trip, 'nights_max', 1, 14, t('nights_max')))),
+    group(t('horizon'), segmented(s.trip, 'horizon_days', [[30, '30'], [60, '60'], [90, '90'], [120, '120'], [180, '180']])));
 
   // 3. Budget and stay
   const fam = s.budgets.family;
@@ -502,9 +506,9 @@ function settingsView() {
     group(t('children'), kids));
   const budget = panel(t('tab_budget'), t('budget_hint'),
     h('div', { class: 'two' }, field(t('solo_budget'), numberInput(s.budgets.solo, 'budget_eur', 30, 10000, 1, '€'))),
+    toggle(s.budgets, 'include_transfer', t('include_transfer')),
     toggle(fam, 'enabled', t('family_enable'), () => { familyBox.hidden = !fam.enabled; }),
     familyBox,
-    toggle(s.budgets, 'include_transfer', t('include_transfer')),
     h('h3', {}, t('s_stay')),
     h('div', { class: 'two' },
       group(t('min_rating'), segmented(s.stay, 'min_rating', [[7, '7+'], [7.5, '7.5+'], [8, '8+'], [8.5, '8.5+'], [9, '9+']])),
@@ -515,15 +519,15 @@ function settingsView() {
 
   // 4. Calendar
   const school = s.calendar.school;
-  const schoolRegion = h('div', { hidden: school.mode !== 'region' }, segmented(school, 'region', geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)])));
-  const schoolManual = h('div', { hidden: school.mode !== 'manual' }, rangeList(school.manual, 12, false));
+  const schoolRegion = h('div', { class: 'sub', hidden: school.mode !== 'region' }, h('span', { class: 'sub-label' }, t('region')), segmented(school, 'region', geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)])));
+  const schoolManual = h('div', { class: 'sub', hidden: school.mode !== 'manual' }, rangeList(school.manual, 12, false));
   const calendar = panel(t('tab_calendar'), t('calendar_intro'),
     group(t('holiday_country'), segmented(s.calendar, 'holiday_country', geo.holiday_countries.map((c) => [c, countryName(c)]))),
     group(t('workdays'), chips(s.calendar.workdays, t('days').map((d, i) => [i + 1, d]), { max: 7 })),
     group(t('max_lost'), segmented(s.calendar, 'max_lost_workdays', [[0, t('lost_0')], [1, t('lost_1')], [2, t('lost_2')]])),
     group(t('school'), h('div', {},
       segmented(school, 'mode', [['none', t('school_none')], ['region', t('school_region')], ['manual', t('school_manual')]], () => {
-        if (school.mode === 'region' && !school.region) { school.region = 'SK-BL'; schoolRegion.replaceChildren(segmented(school, 'region', geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)]))); }
+        if (school.mode === 'region' && !school.region) { school.region = 'SK-BL'; schoolRegion.replaceChildren(h('span', { class: 'sub-label' }, t('region')), segmented(school, 'region', geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)]))); }
         schoolRegion.hidden = school.mode !== 'region';
         schoolManual.hidden = school.mode !== 'manual';
       }), schoolRegion, schoolManual)),
@@ -537,15 +541,14 @@ function settingsView() {
     const card = h('article', { class: `feed${b.enabled ? ' on' : ''}` });
     const sw = toggle(b, 'enabled', t('enabled'), () => { body.hidden = !b.enabled; card.classList.toggle('on', b.enabled); });
     card.append(h('div', { class: 'feed-head' },
-      h('span', { class: 'feed-icon', 'aria-hidden': 'true' }, icon),
-      h('div', { class: 'feed-title' }, h('h3', {}, t(`b_${key}`)), h('p', {}, t(`b_${key}_d`))),
+      h('div', { class: 'feed-title' }, h('h3', {}, h('span', { class: 'feed-icon', 'aria-hidden': 'true' }, icon), t(`b_${key}`)), h('p', {}, t(`b_${key}_d`))),
       sw), body);
     return card;
   };
   const vac = s.blocks.vacation;
-  const hotels = h('div', { class: 'ranges' });
+  const hotels = h('div', { class: 'hotels' });
   const paintHotels = () => {
-    const input = h('input', { type: 'url', placeholder: 'https://www.booking.com/hotel/…', 'aria-label': t('hotel_url') });
+    const input = h('input', { type: 'url', inputmode: 'url', placeholder: t('hotel_placeholder'), 'aria-label': t('hotel_url') });
     const msg = h('p', { class: 'error small', role: 'alert' });
     const add = () => {
       const url = normalizeBooking(input.value);
@@ -555,10 +558,11 @@ function settingsView() {
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
     hotels.replaceChildren(
-      ...vac.hotels.map((url, i) => h('div', { class: 'hotel' },
+      vac.hotels.length ? h('div', { class: 'hotel-list' }, ...vac.hotels.map((url, i) => h('span', { class: 'tag' },
         h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
-        h('button', { type: 'button', class: 'icon-btn', 'aria-label': t('remove'), onclick: () => { vac.hotels.splice(i, 1); paintHotels(); markDirty(); } }, '×'))),
-      vac.hotels.length < 10 ? h('div', { class: 'row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '', msg);
+        h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { vac.hotels.splice(i, 1); paintHotels(); markDirty(); } }, '×')))) : '',
+      vac.hotels.length < 10 ? h('div', { class: 'url-row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '',
+      vac.hotels.length < 10 ? h('p', { class: 'hint example' }, t('hotel_example'), ' ', h('code', {}, 'https://www.booking.com/hotel/tr/lonicera-resort-spa.html')) : '', msg);
   };
   paintHotels();
   const sug = vac.suggest;
@@ -636,7 +640,9 @@ function settingsView() {
     for (const [k, p] of Object.entries(panels)) p.hidden = k !== name;
     stepLine.textContent = fmt('step_of', { n: i + 1, m: TABS.length });
     prev.hidden = i === 0;
-    next.textContent = i === TABS.length - 1 ? (me.configured ? t('save') : t('finish')) : `${t('next')}: ${t(`tab_${TABS[i + 1]}`)} →`;
+    // On the last step the save bar below does the saving; no second button.
+    next.hidden = i === TABS.length - 1;
+    if (!next.hidden) next.textContent = `${t('next')}: ${t(`tab_${TABS[i + 1]}`)} →`;
     const active = nav.querySelector(`[data-tab="${name}"]`);
     if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest', inline: 'center' });
     if (scroll) window.scrollTo({ top: 0 });
@@ -644,10 +650,7 @@ function settingsView() {
   TABS.forEach((name, i) => nav.append(h('button', { type: 'button', 'data-tab': name, onclick: () => show(name, true) },
     h('span', { class: 'num' }, String(i + 1)), t(`tab_${name}`))));
   prev.addEventListener('click', () => show(TABS[Math.max(0, TABS.indexOf(tab) - 1)], true));
-  next.addEventListener('click', () => {
-    const i = TABS.indexOf(tab);
-    if (i === TABS.length - 1) save(); else show(TABS[i + 1], true);
-  });
+  next.addEventListener('click', () => show(TABS[Math.min(TABS.length - 1, TABS.indexOf(tab) + 1)], true));
   content.append(...Object.values(panels), h('div', { class: 'pager' }, prev, stepLine, next));
   const view = h('div', { class: 'wrap settings' }, status, h('div', { class: 'layout' }, nav, content), saveBar());
   show(tab, false);
@@ -674,8 +677,8 @@ function hotelLabel(url) {
 let bar = null;
 function saveBar() {
   const status = h('span', { class: 'status', role: 'status' });
-  const button = h('button', { class: 'btn primary', type: 'button', onclick: save }, t('save'));
-  bar = { el: h('div', { class: 'savebar' }, h('div', { class: 'wrap narrow' }, status, button)), status, button };
+  const button = h('button', { class: 'btn primary', type: 'button', onclick: save }, me && !me.configured ? t('finish') : t('save'));
+  bar = { el: h('div', { class: 'savebar' }, h('div', { class: 'wrap' }, status, button)), status, button };
   paintBar();
   return bar.el;
 }
@@ -684,7 +687,7 @@ function isDirty() { return draft && JSON.stringify(draft) !== saved; }
 function markDirty() { paintBar(); }
 function paintBar(text) {
   if (!bar) return;
-  const dirty = isDirty() || !me.configured || me.lang !== lang;
+  const dirty = isDirty() || !me.configured;
   bar.el.classList.toggle('dirty', dirty);
   bar.status.textContent = text || (dirty ? t('unsaved') : t('saved'));
 }
@@ -699,6 +702,7 @@ async function save() {
     me.configured = true;
     me.lang = lang;
     saved = JSON.stringify(draft);
+    bar.button.textContent = t('save');
     paintBar();
     return;
   }
