@@ -136,7 +136,9 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
         try:
             token, _ = auth.verify(body.nonce, body.secret, body.code)
         except AuthError as exc:
-            return error(400 if str(exc) != "pending" else 409, str(exc))
+            # Only fixed codes ever leave the server, never exception text.
+            code = {"expired": "expired", "pending": "pending"}.get(str(exc), "invalid")
+            return error(409 if code == "pending" else 400, code)
         return {"token": token}
 
     @app.get("/v1/me")
