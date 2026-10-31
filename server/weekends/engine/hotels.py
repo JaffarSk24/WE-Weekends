@@ -24,6 +24,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import httpx
 
 from ..db import Database
+from .places import _contains, place_of, words
 
 log = logging.getLogger("weekends.hotels")
 DATA = Path(__file__).resolve().parents[1] / "data"
@@ -37,6 +38,7 @@ class Stay:
     reviews: int | None
     url: str
     source: str  # booking, xotelo, link
+    place: str | None = None  # known resort or city the hotel is in
     approx: bool = False
 
 
@@ -56,13 +58,17 @@ class StayQuery:
     breakfast: str
     min_stars: int
     lang: str
+    exclude: tuple[tuple[str, ...], ...] = ()  # word patterns of excluded places
+    avoid: tuple[str, ...] = ()  # hotel names the user marked down
 
     @property
     def nights(self) -> int:
         return (self.checkout - self.checkin).days
 
 
-def booking_search_link(q: StayQuery) -> str:
+def booking_search_link(q: StayQuery, hotel: str = "") -> str:
+    """A Booking.com search for the exact dates and party; with a hotel name it
+    opens straight on that hotel."""
     filters = []
     if q.min_rating >= 6:
         filters.append(f"review_score={int(q.min_rating * 10)}")
@@ -71,12 +77,12 @@ def booking_search_link(q: StayQuery) -> str:
     if q.breakfast in ("prefer", "require"):
         filters.append("mealplan=1")
     params = [
-        ("ss", f"{q.city}"), ("checkin", q.checkin.isoformat()), ("checkout", q.checkout.isoformat()),
+        ("ss", f"{hotel}, {q.city}" if hotel else q.city), ("checkin", q.checkin.isoformat()), ("checkout", q.checkout.isoformat()),
         ("group_adults", q.adults), ("group_children", len(q.children)), ("no_rooms", 1),
         ("lang", {"ru": "ru", "sk": "sk", "en": "en-gb"}[q.lang]), ("selected_currency", "EUR"), ("order", "price"),
     ]
     params += [("age", a) for a in q.children]
-    if filters:
+    if filters and not hotel:
         params.append(("nflt", ";".join(filters)))
     return "https://www.booking.com/searchresults.html?" + urlencode(params)
 
@@ -150,6 +156,10 @@ class Hotels:
             count = int(summary.get("count") or 0)
             low = (h.get("price_ranges") or {}).get("minimum")
             if rating >= q.min_rating and count >= q.min_reviews and low and h.get("accommodation_type") in ("Hotel", "Specialty lodging", "B&B", "Inn", None):
+                location = str(h.get("url", "")).rsplit("-Reviews-", 1)[-1].removesuffix(".html")
+                tokens = words(location.replace("-", " ").replace("_", " "))
+                if any(_contains(tokens, pattern) for pattern in q.exclude) or h.get("name", "") in q.avoid:
+                    continue
                 good.append((low, rating, count, h))
         good.sort(key=lambda x: x[0])
         persons = q.adults + len(q.children)
@@ -170,8 +180,9 @@ class Hotels:
             nightly = booking[0] if booking else min(prices)
             total = round(nightly * q.nights)
             if best is None or total < (best.price or 1e9):
-                best = Stay(name=h.get("name", ""), price=total, rating=round(rating, 1), reviews=count,
-                            url=booking_search_link(q) if booking else str(h.get("url", "")), source="xotelo",
+                location = str(h.get("url", "")).rsplit("-Reviews-", 1)[-1].removesuffix(".html").split("-", 1)[-1]
+                best = Stay(name=h.get("name", ""), price=total, rating=round(rating, 1), reviews=count, place=place_of(location.replace("_", " ")),
+                            url=booking_search_link(q, h.get("name", "")), source="xotelo",
                             approx=len(q.children) > 0 or persons > 4)
         return best
 

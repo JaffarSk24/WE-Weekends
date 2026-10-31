@@ -30,6 +30,7 @@ from .calendar import UserCalendar
 from .entry import allowed, status
 from .hotels import Hotels, StayQuery
 from .kiwi import Itinerary, Kiwi, kdate
+from .places import Exclusions
 from .score import Candidate, evaluate, score
 from .store import Store
 from .weather import WeatherSource
@@ -188,17 +189,18 @@ class Engine:
                 return f.price
         return None
 
-    def _stay(self, c: Candidate, s: dict, lang: str) -> None:
+    def _stay(self, c: Candidate, s: dict, lang: str, ex: Exclusions, avoid: tuple[str, ...]) -> None:
         adults, _, _, ages = party_of(s, c.mode)
         d = destinations().get(c.it.dest) or {}
         q = StayQuery(city=d.get("city") or c.it.city, country=c.it.country, iata=c.it.dest, lat=d.get("lat"), lon=d.get("lon"),
                       checkin=c.it.checkin, checkout=c.it.checkout, adults=adults if c.mode == "family" else 1,
                       children=tuple(a for a in ages if a < 12) if c.mode == "family" else (),
                       min_rating=s["stay"]["min_rating"], min_reviews=s["stay"]["min_reviews"],
-                      breakfast=s["stay"]["breakfast"], min_stars=s["stay"]["min_stars"], lang=lang)
+                      breakfast=s["stay"]["breakfast"], min_stars=s["stay"]["min_stars"], lang=lang,
+                      exclude=tuple(ex.patterns), avoid=avoid)
         stay = self.hotels.cheapest(q)
-        c.hotel_price, c.hotel_name, c.hotel_rating = stay.price, stay.name, stay.rating
-        c.hotel_url, c.hotel_source, c.hotel_approx = stay.url, stay.source, stay.approx
+        c.hotel_price, c.hotel_name, c.hotel_rating, c.hotel_reviews = stay.price, stay.name, stay.rating, stay.reviews
+        c.hotel_url, c.hotel_source, c.hotel_approx, c.hotel_place = stay.url, stay.source, stay.approx, stay.place
 
     def _weather(self, c: Candidate) -> None:
         d = destinations().get(c.it.dest) or {}
@@ -208,13 +210,16 @@ class Engine:
     def pick(self, chat_id: int, s: dict, lang: str, mode: str, today: date) -> list[Candidate]:
         cal = UserCalendar(s)
         countries = allowed_countries(s)
+        ex = Exclusions(s["geography"]["exclude_places"])
         family = mode == "family"
         budget = s["budgets"]["family"]["budget_eur"] if family else s["budgets"]["solo"]["budget_eur"]
         ratings = self.store.ratings(chat_id)
+        avoid = tuple(k[6:] for k, (v, _) in ratings.items() if k.startswith("hotel:") and v < 0)
         sent = self.store.last_sent(chat_id)
         nights = (s["trip"]["nights_min"], s["trip"]["nights_max"])
         transfer = (50 if family else 30) if s["budgets"]["include_transfer"] else 0
-        pool = [it for o in s["profile"]["origins"] for it in self.pool.get(o, {}).values() if it.country in countries]
+        pool = [it for o in s["profile"]["origins"] for it in self.pool.get(o, {}).values()
+                if it.country in countries and not ex.destination(it.dest, city_name(it.dest, it.city, "en"))]
         cands = []
         for it in pool:
             r = evaluate(it, cal, family, nights, today, s["trip"]["horizon_days"])
@@ -237,7 +242,7 @@ class Engine:
         seen_dest: set[str] = set()
         checks = 0
         for c in cands:
-            if len(chosen) >= limit or checks >= 12:
+            if len(chosen) >= limit or checks >= 15:
                 break
             if c.it.dest in seen_dest:
                 continue
@@ -252,11 +257,13 @@ class Engine:
                     continue
                 c.flight_price = price
             if mode != "diamond":
-                self._stay(c, s, lang)
+                self._stay(c, s, lang, ex, avoid)
                 self._weather(c)
                 if c.total > budget:
                     continue
                 c.penalty = score(c, s, budget, ratings)
+                if c.hotel_price is None:
+                    c.penalty += 30  # a trip with a known total beats one without
             seen_dest.add(c.it.dest)
             chosen.append(c)
         chosen.sort(key=lambda c: (c.penalty, c.total))
@@ -265,6 +272,7 @@ class Engine:
     def vacation(self, s: dict, lang: str, today: date) -> list[str]:
         v = s["blocks"]["vacation"]
         t = dg.TX[lang]
+        ex = Exclusions(s["geography"]["exclude_places"])
         mode = "family" if v["party"] == "family" and s["budgets"]["family"]["enabled"] else "solo"
         adults, children, infants, ages = party_of(s, mode)
         blocks = []
@@ -272,40 +280,42 @@ class Engine:
             start, end = date.fromisoformat(opt["start"]), date.fromisoformat(opt["end"])
             if start <= today:
                 continue
-            who = t["family"] if mode == "family" else t["solo"]
-            lines = [f"<b>{dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"]
+            who = (t["family"] + dg.party(lang, adults, len(ages))) if mode == "family" else t["solo"]
+            lines = [f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"]
             flights = []
             for origin in s["profile"]["origins"]:
                 for country in v["countries"]:
                     flights += self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(start), returnDate=kdate(end),
                                                 adults=adults, children=children, infants=infants, one_for_city=True,
                                                 adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults)
+            flights = [f for f in flights if not ex.destination(f.dest, city_name(f.dest, f.city, "en"))]
             flights.sort(key=lambda f: f.price)
             cheapest: dict[str, Itinerary] = {}
             for f in flights:  # one line per destination, from whichever airport is cheaper
                 cheapest.setdefault(f.dest, f)
             for f in list(cheapest.values())[:MAX_ITEMS["vacation"]]:
                 name = city_name(f.dest, f.city, lang)
-                link = f' · <a href="{dg.e(f.url)}">{t["tickets"]} →</a>' if f.url.startswith("https://") else ""
-                lines.append(f"{dg.flag(f.country)} {dg.e(name)} ({dg.e(f.dest)}): 🛫 {round(f.price)}€, {dg.e(f.airline)}, "
-                             f"{dg.e(dg.when(lang, f.depart))} / {dg.e(dg.when(lang, f.ret_depart))}{link}")
+                url = f.url if f.url.startswith("https://") else "https://www.kiwi.com/"
+                lines.append(f'{dg.flag(f.country)} <a href="{dg.e(url)}">{dg.e(name)}</a> {dg.e(f.dest)}, {dg.e(f.airline)}: '
+                             f"{dg.e(dg.when(lang, f.depart))} / {dg.e(dg.when(lang, f.ret_depart))} · <b>{round(f.price)}€</b>")
             if v["countries"] and not flights:
                 lines.append(t["vac_no_flights"])
-            if v["hotels"]:
+            hotels = [u for u in v["hotels"] if not ex.hits(u.rsplit("/", 1)[-1].replace("-", " "))]
+            if hotels:
                 lines.append(t["vac_hotels"])
-                for url in v["hotels"]:
+                for url in hotels:
                     slug = url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ")
                     params = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR"
                     params += "".join(f"&age={a}" for a in ages)
                     lines.append(f'🏨 <a href="{dg.e(url + params)}">{dg.e(slug.title())}</a>')
             blocks.append("\n".join(lines))
-        if v["suggest"]["enabled"] and self.hotels.source != "booking":
-            blocks.append(t["vac_suggest_off"])
         return blocks
 
-    def build(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> tuple[list[str], list[list[list[dict]]], list[tuple[str, float]]]:
+    def build(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> tuple[list[tuple[str, list[list[dict]] | None]], list[tuple[str, float]]]:
+        """One message per trip with its own buttons, like a conversation."""
         t = dg.TX[lang]
         due = self.due_blocks(s, today.isoweekday(), first)
+        adults, _, _, ages = party_of(s, "family")
         sections: list[tuple[str, list[Candidate]]] = []
         if "weekends" in due:
             if s["budgets"]["solo"]["enabled"]:
@@ -314,69 +324,51 @@ class Engine:
                 sections.append((f"{t['weekends']} · {t['family']}", self.pick(chat_id, s, lang, "family", today)))
         if "diamonds" in due:
             sections.append((t["diamonds"], self.pick(chat_id, s, lang, "diamond", today)))
-        blocks: list[str] = []
-        keyboards: list[list[list[dict]]] = []
+        messages: list[tuple[str, list[list[dict]] | None]] = []
         sent_items: list[tuple[str, float]] = []
+        sent_before = self.store.last_sent(chat_id)
         for title, items in sections:
-            if not items:
-                continue
-            blocks.append(f"<b>━ {dg.e(title)}</b>")
-            keyboards.append([])
-            for c in items:
+            for i, c in enumerate(items):
                 name = city_name(c.it.dest, c.it.city, lang)
-                blocks.append(dg.item_text(lang, c, name))
-                bid = secrets.token_hex(6)
-                self.store.button(bid, chat_id, f"city:{c.it.dest}")
-                keyboards.append([[{"text": f"{t['like']} {name}"[:60], "callback_data": f"r:{bid}:1"},
-                                   {"text": f"{t['dislike']} {name}"[:60], "callback_data": f"r:{bid}:-1"}]])
+                text = dg.item_text(lang, c, name, adults, len(ages), new=f"{c.mode}:{c.it.key}" not in sent_before)
+                if i == 0:
+                    text = f"<b>━ {dg.e(title)}</b>\n\n{text}"
+                ids = {"city": secrets.token_hex(6), "times": secrets.token_hex(6)}
+                self.store.button(ids["city"], chat_id, f"city:{c.it.dest}")
+                self.store.button(ids["times"], chat_id, f"slots:{c.out_slot}:{c.ret_slot}")
+                if c.hotel_name:
+                    ids["stay"] = secrets.token_hex(6)
+                    self.store.button(ids["stay"], chat_id, f"hotel:{c.hotel_name}")
+                messages.append((text[:4000], dg.buttons(lang, ids, c.mode)))
                 sent_items.append((f"{c.mode}:{c.it.key}", c.it.price))
         if "wow" in due:
-            sent = self.store.last_sent(chat_id)
             cap = s["blocks"]["wow"]["max_per_person_night"] * 7
-            deals = [d for d in self.wow.deals() if f"wow:{d.id}" not in sent and (d.price is None or d.price <= cap)][:4]
+            deals = [d for d in self.wow.deals() if f"wow:{d.id}" not in sent_before and (d.price is None or d.price <= cap)][:4]
             if deals:
-                blocks.append(f"<b>━ {dg.e(t['wow'])}</b>")
-                keyboards.append([])
+                lines = [f"<b>━ {dg.e(t['wow'])}</b>"]
                 for d in deals:
                     price = f" · {t['from']} {d.price}€" if d.price else ""
-                    blocks.append(f'🔥 {dg.e(d.title)}{price}\n<a href="{dg.e(d.url)}">{dg.e(d.agency)} →</a>')
-                    keyboards.append([])
+                    lines.append(f'🔥 <a href="{dg.e(d.url)}">{dg.e(d.agency)}</a>: {dg.e(d.title)}{price}')
                     sent_items.append((f"wow:{d.id}", float(d.price or 0)))
+                messages.append(("\n\n".join(lines)[:4000], None))
         if "vacation" in due:
-            vac = self.vacation(s, lang, today)
-            if vac:
-                blocks.append(f"<b>━ {dg.e(t['vacation'])}</b>")
-                keyboards.append([])
-                for b in vac:
-                    blocks.append(b)
-                    keyboards.append([])
-        return blocks, keyboards, sent_items
+            for block in self.vacation(s, lang, today):
+                messages.append((block[:4000], None))
+        return messages, sent_items
 
     def send_digest(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> int:
-        blocks, keyboards, sent_items = self.build(chat_id, lang, s, today, first)
-        if not blocks:
+        messages, sent_items = self.build(chat_id, lang, s, today, first)
+        if not messages:
             return 0
         t = dg.TX[lang]
-        head = f"<b>{dg.e(t['title'].format(d=today.strftime('%d.%m.%Y')))}</b>"
+        d = today.strftime("%d.%m.%Y")
+        head = f"<b>{dg.e(t['title'].format(d=d))}</b>\n<i>{dg.e(t['head'].format(d=d))}</i>"
         foot = t["footer"].format(url=f"{self.cfg.web_url}?lang={lang}")
         if s["profile"]["citizenship"] is None:
             foot = t["no_citizenship"] + "\n" + foot
-        all_blocks = [head] + blocks + [dg.e(foot)]
-        all_keys = [[]] + keyboards + [[]]
-        # pack blocks into messages and collect the buttons of each message
-        messages: list[tuple[str, list[list[dict]]]] = []
-        text, rows = "", []
-        for block, keys in zip(all_blocks, all_keys, strict=True):
-            if text and len(text) + len(block) + 2 > 3800:
-                messages.append((text, rows))
-                text, rows = "", []
-            text = f"{text}\n\n{block}" if text else block
-            rows += keys
-        if text:
-            messages.append((text, rows))
         delivered = 0
-        for text, rows in messages:
-            if self.tg.send(chat_id, text, rows[:20] or None):
+        for text, keyboard in [(head, None), *messages, (dg.e(foot), None)]:
+            if self.tg.send(chat_id, text, keyboard):
                 delivered += 1
             time.sleep(0.05)
         if delivered:

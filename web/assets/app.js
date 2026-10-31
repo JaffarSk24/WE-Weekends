@@ -145,8 +145,7 @@ function landingView() {
       loginBox()),
     h('section', { class: 'grid4' }, features),
     h('section', { class: 'card how' }, h('h2', {}, t('how_t')),
-      h('ol', {}, h('li', {}, t('how1')), h('li', {}, t('how2')), h('li', {}, t('how3')))),
-    h('section', { class: 'card note' }, h('h2', {}, t('disclaimer_t')), h('p', {}, t('disclaimer'))));
+      h('ol', {}, h('li', {}, t('how1')), h('li', {}, t('how2')), h('li', {}, t('how3')))));
 }
 
 function pendingLogin() {
@@ -158,6 +157,11 @@ function pendingLogin() {
     return login;
   } catch { return null; }
 }
+
+// The Telegram app is opened from this very tab (tg:// link), so no empty
+// browser tab is left behind and the code field stays in front of the user.
+const appLink = (nonce) => `tg://resolve?domain=${BOT}&start=l_${nonce}`;
+const webLink = (nonce) => `https://t.me/${BOT}?start=l_${nonce}`;
 
 function loginBox() {
   const box = h('div', { class: 'login' });
@@ -171,13 +175,13 @@ function loginBox() {
       button.disabled = false;
       if (!res.ok || !/^[A-Za-z0-9_-]{32}$/.test(res.data.nonce || '')) { msg.textContent = errorText(res); return; }
       store.set('sessionStorage', LOGIN_KEY, JSON.stringify({ nonce: res.data.nonce, secret: res.data.secret, until: Date.now() + res.data.expires_in * 1000 }));
-      window.open(`https://t.me/${BOT}?start=l_${res.data.nonce}`, '_blank', 'noopener');
       render();
+      location.href = appLink(res.data.nonce);
     });
     box.append(button, msg);
     return box;
   }
-  const input = h('input', { id: 'code', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, pattern: '[0-9]{6}', required: true });
+  const input = h('input', { id: 'code', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, pattern: '[0-9]{6}', required: true, placeholder: '000000' });
   const msg = h('p', { class: 'error', role: 'alert' });
   const submit = h('button', { class: 'btn primary', type: 'submit' }, t('login_verify'));
   const form = h('form', { class: 'code-form' },
@@ -198,10 +202,14 @@ function loginBox() {
     store.set('localStorage', TOKEN_KEY, res.data.token);
     await loadMe();
   });
+  input.addEventListener('input', () => { if (input.value.replace(/\D/g, '').length === 6) form.requestSubmit(); });
+  box.classList.add('card', 'login-steps');
   box.append(
-    h('p', {}, t('login_step1')),
-    h('a', { class: 'btn', href: `https://t.me/${BOT}?start=l_${login.nonce}`, target: '_blank', rel: 'noopener' }, t('login_open')),
-    h('p', {}, t('login_step2')), form, msg,
+    h('ol', { class: 'steps' },
+      h('li', {}, h('p', {}, t('login_step1')),
+        h('a', { class: 'btn', href: appLink(login.nonce) }, t('login_open')),
+        h('p', { class: 'hint' }, t('login_no_app'), ' ', h('a', { href: webLink(login.nonce), target: '_blank', rel: 'noopener' }, t('login_web')))),
+      h('li', {}, h('p', {}, t('login_step2')), form, msg)),
     h('button', { class: 'linkish', type: 'button', onclick: () => { store.del('sessionStorage', LOGIN_KEY); render(); } }, t('cancel')));
   setTimeout(() => input.focus(), 0);
   return box;
@@ -240,14 +248,24 @@ function group(label, control, hint) {
   return h('fieldset', { class: 'field' }, h('legend', {}, label), control, hint ? h('p', { class: 'hint' }, hint) : null);
 }
 
-function numberInput(obj, key, min, max, step = 1) {
-  return h('input', {
+function numberInput(obj, key, min, max, step = 1, suffix = '') {
+  const input = h('input', {
     type: 'number', min, max, step, value: obj[key], inputmode: step < 1 ? 'decimal' : 'numeric',
     oninput: (e) => {
       const v = Number(e.target.value);
       if (Number.isFinite(v) && v >= min && v <= max) { obj[key] = step < 1 ? Math.round(v * 10) / 10 : Math.round(v); markDirty(); }
     },
   });
+  return suffix ? h('span', { class: 'with-suffix' }, input, h('span', { class: 'suffix' }, suffix)) : input;
+}
+
+// − 2 + : for small counts, easier than typing on a phone
+function stepper(obj, key, min, max, label) {
+  const out = h('output', { 'aria-live': 'polite' }, String(obj[key]));
+  const set = (v) => { obj[key] = Math.min(max, Math.max(min, v)); out.textContent = String(obj[key]); markDirty(); };
+  return h('div', { class: 'stepper', role: 'group', 'aria-label': label },
+    h('button', { type: 'button', 'aria-label': '−', onclick: () => set(obj[key] - 1) }, '−'), out,
+    h('button', { type: 'button', 'aria-label': '+', onclick: () => set(obj[key] + 1) }, '+'));
 }
 
 function select(obj, key, options, onchange) {
@@ -258,9 +276,10 @@ function select(obj, key, options, onchange) {
 
 function toggle(obj, key, label, onchange) {
   const id = nextId();
-  return h('div', { class: 'toggle' },
-    h('input', { type: 'checkbox', id, checked: Boolean(obj[key]), onchange: (e) => { obj[key] = e.target.checked; markDirty(); if (onchange) onchange(); } }),
-    h('label', { for: id }, label));
+  return h('label', { class: 'switch', for: id },
+    h('input', { type: 'checkbox', role: 'switch', id, checked: Boolean(obj[key]), onchange: (e) => { obj[key] = e.target.checked; markDirty(); if (onchange) onchange(); } }),
+    h('span', { class: 'track', 'aria-hidden': 'true' }),
+    h('span', { class: 'switch-label' }, label));
 }
 
 function chips(list, options, { min = 0, max = Infinity } = {}) {
@@ -292,27 +311,125 @@ function slider(obj, key, label) {
   const id = nextId();
   return h('div', { class: 'slider' },
     h('label', { for: id }, label),
-    h('input', { id, type: 'range', min: 0, max: 10, step: 1, value: obj[key], oninput: (e) => { obj[key] = Number(e.target.value); out.textContent = e.target.value; draft.rating.preset = 'custom'; markDirty(); } }),
+    h('input', { id, type: 'range', min: 0, max: 10, step: 1, value: obj[key], oninput: (e) => { obj[key] = Number(e.target.value); out.textContent = e.target.value; draft.rating.preset = 'custom'; markDirty(); paintPresets(); } }),
     out);
 }
 
-function countryPicker(list, max) {
+// Country search: every country is known by its name in Russian, Slovak and
+// English and by its code; only a country picked from the suggestions can be
+// added, so a typo never silently turns into an empty search.
+const fold = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ё/g, 'е').trim();
+let countryIndex = null;
+function countries() {
+  if (countryIndex && countryIndex.lang === lang) return countryIndex.list;
+  const names = Object.fromEntries(['ru', 'sk', 'en'].map((l) => {
+    try { return [l, new Intl.DisplayNames([l], { type: 'region' })]; } catch { return [l, null]; }
+  }));
+  const list = geo.countries.map((code) => {
+    const all = ['ru', 'sk', 'en'].map((l) => (code === 'XK' ? { ru: 'Косово', sk: 'Kosovo', en: 'Kosovo' }[l] : names[l] && names[l].of(code)) || code);
+    return { code, name: countryName(code), keys: [...new Set([...all.map(fold), code.toLowerCase()])] };
+  }).sort((a, b) => a.name.localeCompare(b.name, lang));
+  countryIndex = { lang, list };
+  return list;
+}
+
+function suggest(query, exclude, source = countries) {
+  const q = fold(query);
+  if (!q) return [];
+  const starts = [], inside = [];
+  for (const c of source()) {
+    if (exclude.includes(c.code)) continue;
+    if (c.keys.some((k) => k.startsWith(q) || k.split(/[\s-]+/).some((w) => w.startsWith(q)))) starts.push(c);
+    else if (q.length >= 3 && c.keys.some((k) => k.includes(q))) inside.push(c);
+  }
+  return [...starts, ...inside].slice(0, 8);
+}
+
+function combobox({ placeholder, exclude, onPick, source = countries }) {
   const listId = nextId();
-  const all = geo.countries.map((c) => [c, countryName(c)]).sort((a, b) => a[1].localeCompare(b[1], lang));
-  const input = h('input', { list: listId, placeholder: t('add_country'), autocomplete: 'off' });
+  const input = h('input', { type: 'text', role: 'combobox', 'aria-expanded': 'false', 'aria-controls': listId, 'aria-autocomplete': 'list', autocomplete: 'off', placeholder });
+  const list = h('ul', { id: listId, role: 'listbox', class: 'options', hidden: true });
+  const msg = h('p', { class: 'error small', role: 'alert' });
+  let items = [], active = -1;
+  const close = () => { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; };
+  const pick = (c) => { onPick(c.code); input.value = ''; msg.textContent = ''; close(); input.focus(); };
+  const paint = () => {
+    list.replaceChildren(...items.map((c, i) => {
+      const li = h('li', { role: 'option', id: `${listId}-${i}`, 'aria-selected': String(i === active) }, c.name, h('span', { class: 'code' }, c.badge || c.code));
+      li.addEventListener('mousedown', (e) => { e.preventDefault(); pick(c); });
+      return li;
+    }));
+    list.hidden = items.length === 0;
+    input.setAttribute('aria-expanded', String(!list.hidden));
+    if (active >= 0) input.setAttribute('aria-activedescendant', `${listId}-${active}`); else input.removeAttribute('aria-activedescendant');
+  };
+  input.addEventListener('input', () => {
+    items = suggest(input.value, exclude(), source);
+    active = items.length ? 0 : -1;
+    msg.textContent = input.value.trim() && !items.length ? t(source === countries ? 'no_country' : 'no_place') : '';
+    paint();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' && items.length) { e.preventDefault(); active = (active + 1) % items.length; paint(); }
+    else if (e.key === 'ArrowUp' && items.length) { e.preventDefault(); active = (active - 1 + items.length) % items.length; paint(); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (active >= 0) pick(items[active]); else if (input.value.trim()) msg.textContent = t(source === countries ? 'pick_country' : 'pick_place'); }
+    else if (e.key === 'Escape') close();
+  });
+  input.addEventListener('blur', () => { setTimeout(close, 100); if (input.value.trim()) msg.textContent = t(source === countries ? 'pick_country' : 'pick_place'); });
+  input.addEventListener('focus', () => { if (input.value.trim()) { items = suggest(input.value, exclude(), source); paint(); } });
+  return h('div', { class: 'combo' }, input, list, msg);
+}
+
+function countryPicker(list, max) {
   const tags = h('div', { class: 'tags' });
   const paint = () => tags.replaceChildren(...list.map((code) => h('span', { class: 'tag' }, countryName(code),
     h('button', { type: 'button', 'aria-label': `${t('remove')} ${countryName(code)}`, onclick: () => { list.splice(list.indexOf(code), 1); paint(); markDirty(); } }, '×'))));
-  const add = () => {
-    const name = input.value.trim().toLowerCase();
-    const hit = all.find(([code, n]) => n.toLowerCase() === name || code.toLowerCase() === name);
-    if (hit && !list.includes(hit[0]) && list.length < max) { list.push(hit[0]); paint(); markDirty(); }
-    input.value = '';
-  };
-  input.addEventListener('change', add);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
   paint();
-  return h('div', { class: 'picker' }, h('datalist', { id: listId }, all.map(([, n]) => h('option', { value: n }))), input, tags);
+  return h('div', { class: 'picker' },
+    combobox({ placeholder: t('add_country'), exclude: () => list, onPick: (code) => { if (list.length < max) { list.push(code); paint(); markDirty(); } } }),
+    tags);
+}
+
+// Cities and resorts a user never wants: picked from the known list only.
+let placeIndex = null;
+function places() {
+  if (placeIndex && placeIndex.lang === lang) return placeIndex.list;
+  const list = Object.entries(geo.places || {}).map(([id, p]) => ({
+    code: id, badge: p.country, name: `${p[lang] || p.en}, ${countryName(p.country)}`,
+    keys: [...new Set([p.en, p.ru, p.sk, ...p.match.map((m) => m.replace(/_/g, ' '))].map(fold))],
+  })).sort((a, b) => a.name.localeCompare(b.name, lang));
+  placeIndex = { lang, list };
+  return list;
+}
+
+function placePicker(list, max) {
+  const label = (id) => { const p = (geo.places || {})[id]; return p ? (p[lang] || p.en) : id; };
+  const tags = h('div', { class: 'tags' });
+  const paint = () => tags.replaceChildren(...list.map((id) => h('span', { class: 'tag' }, label(id),
+    h('button', { type: 'button', 'aria-label': `${t('remove')} ${label(id)}`, onclick: () => { list.splice(list.indexOf(id), 1); paint(); markDirty(); } }, '×'))));
+  paint();
+  return h('div', { class: 'picker' },
+    combobox({ placeholder: t('add_place'), exclude: () => list, source: places, onPick: (id) => { if (list.length < max) { list.push(id); paint(); markDirty(); } } }),
+    tags);
+}
+
+// One country or none, for citizenship and residence.
+function countrySingle(obj, key, allowed, emptyLabel) {
+  const box = h('div', { class: 'single' });
+  const paint = () => {
+    if (obj[key]) {
+      box.replaceChildren(h('span', { class: 'tag big' }, countryName(obj[key]),
+        h('button', { type: 'button', 'aria-label': t('remove'), onclick: () => { obj[key] = null; paint(); markDirty(); } }, '×')));
+    } else {
+      box.replaceChildren(combobox({
+        placeholder: emptyLabel,
+        exclude: () => (allowed ? geo.countries.filter((c) => !allowed.includes(c)) : []),
+        onPick: (code) => { obj[key] = code; paint(); markDirty(); },
+      }));
+    }
+  };
+  paint();
+  return box;
 }
 
 function rangeList(list, max, withScope) {
@@ -320,21 +437,25 @@ function rangeList(list, max, withScope) {
   const today = new Date().toISOString().slice(0, 10);
   const paint = () => {
     box.replaceChildren(...list.map((item, i) => h('div', { class: 'range' },
-      h('label', {}, t('from'), h('input', { type: 'date', value: item.start, onchange: (e) => { item.start = e.target.value; if (item.end < item.start) { item.end = item.start; paint(); } markDirty(); } })),
+      h('label', {}, t('from'), h('input', { type: 'date', value: item.start, min: today, onchange: (e) => { item.start = e.target.value; if (item.end < item.start) { item.end = item.start; paint(); } markDirty(); } })),
       h('label', {}, t('to'), h('input', { type: 'date', value: item.end, min: item.start, onchange: (e) => { item.end = e.target.value; markDirty(); } })),
-      withScope ? select(item, 'scope', [['all', t('scope_all')], ['family', t('scope_family')]]) : null,
-      h('button', { type: 'button', class: 'btn small', onclick: () => { list.splice(i, 1); paint(); markDirty(); } }, t('remove')))),
-    list.length < max ? h('button', { type: 'button', class: 'btn small', onclick: () => { list.push(withScope ? { start: today, end: today, scope: 'all' } : { start: today, end: today }); paint(); markDirty(); } }, t('add_range')) : '');
+      withScope ? segmented(item, 'scope', [['all', t('scope_all')], ['family', t('scope_family')]]) : null,
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': t('remove'), onclick: () => { list.splice(i, 1); paint(); markDirty(); } }, '×'))),
+    list.length < max ? h('button', { type: 'button', class: 'btn small', onclick: () => { list.push(withScope ? { start: today, end: today, scope: 'all' } : { start: today, end: today }); paint(); markDirty(); } }, `+ ${t('add_range')}`) : '');
   };
   paint();
   return box;
 }
 
-function section(title, ...body) {
-  return h('section', { class: 'card section' }, h('h2', {}, title), body);
+function panel(title, intro, ...body) {
+  return h('div', { class: 'panel' }, h('h2', {}, title), intro ? h('p', { class: 'intro' }, intro) : null, body);
 }
 
 // ---------- settings ----------
+
+const TABS = ['from', 'where', 'budget', 'calendar', 'feeds', 'score', 'digest'];
+let tab = TABS.includes(store.get('sessionStorage', 'wew.tab')) ? store.get('sessionStorage', 'wew.tab') : 'from';
+let paintPresets = () => {};
 
 function settingsView() {
   const s = draft;
@@ -343,129 +464,152 @@ function settingsView() {
   if (me.paused) status.push(h('p', { class: 'banner' }, t('st_paused')));
   if (!me.configured) status.push(h('p', { class: 'banner' }, t('st_new')));
 
-  const countries = geo.countries.map((c) => [c, countryName(c)]).sort((a, b) => a[1].localeCompare(b[1], lang));
-  const residence = geo.eu_residence.map((c) => [c, countryName(c)]).sort((a, b) => a[1].localeCompare(b[1], lang));
-
-  const profile = section(t('s_profile'),
+  // 1. From where and who
+  const from = panel(t('tab_from'), t('from_intro'),
     group(t('origins'), chips(s.profile.origins, Object.entries(geo.airports).map(([code, city]) => [code, `${city} ${code}`]), { min: 1, max: 6 }), t('origins_hint')),
     h('div', { class: 'two' },
-      field(t('citizenship'), select(s.profile, 'citizenship', [[null, t('not_set')], ...countries])),
-      field(t('residence'), select(s.profile, 'eu_residence', [[null, t('none')], ...residence]))),
+      group(t('citizenship'), countrySingle(s.profile, 'citizenship', null, t('add_country'))),
+      group(t('residence'), countrySingle(s.profile, 'eu_residence', geo.eu_residence, t('residence_none')))),
     h('p', { class: 'hint' }, t('residence_hint')));
 
-  const prio = (key) => group(t(key), segmented(s.priorities, key, t('prio').map((label, i) => [i, label])));
-  const where = section(t('s_where'),
-    h('h3', {}, t('priorities')), prio('sea'), prio('mountains'), prio('sights'),
+  // 2. Where
+  const prio = (key) => h('div', { class: 'prio-row' }, h('span', { class: 'prio-label' }, t(key)), segmented(s.priorities, key, t('prio').map((label, i) => [i, label])));
+  const where = panel(t('tab_where'), t('where_intro'),
+    group(t('priorities'), h('div', { class: 'prio' }, prio('sea'), prio('mountains'), prio('sights'))),
     group(t('groups'), chips(s.geography.groups, Object.keys(geo.groups).map((g) => [g, t(`g_${g}`)]), { max: 20 })),
-    group(t('include'), countryPicker(s.geography.include, 250)),
-    group(t('exclude'), countryPicker(s.geography.exclude, 250)));
+    h('div', { class: 'two' },
+      group(t('include'), countryPicker(s.geography.include, 250)),
+      group(t('exclude'), countryPicker(s.geography.exclude, 250))),
+    group(t('exclude_places'), placePicker(s.geography.exclude_places, 50), t('exclude_places_hint')),
+    group(t('s_trip'), h('div', { class: 'inline' },
+      h('span', {}, t('nights_min')), stepper(s.trip, 'nights_min', 1, 7, t('nights_min')),
+      h('span', {}, t('nights_max')), stepper(s.trip, 'nights_max', 1, 14, t('nights_max')))),
+    group(t('horizon'), segmented(s.trip, 'horizon_days', [[30, '30'], [60, '60'], [90, '90'], [120, '120'], [180, '180']].map(([v, l]) => [v, fmt('days_n', { n: l })]))));
 
+  // 3. Budget and stay
   const fam = s.budgets.family;
   const familyBox = h('div', { class: 'sub', hidden: !fam.enabled });
   const kids = h('div', { class: 'tags' });
   const paintKids = () => kids.replaceChildren(
     ...fam.children.map((age, i) => h('span', { class: 'tag' },
       h('input', { type: 'number', min: 0, max: 17, value: age, 'aria-label': t('child_age'), class: 'age', oninput: (e) => { const v = Number(e.target.value); if (v >= 0 && v <= 17) { fam.children[i] = Math.round(v); markDirty(); } } }),
+      h('span', { class: 'muted' }, t('years')),
       h('button', { type: 'button', 'aria-label': t('remove'), onclick: () => { fam.children.splice(i, 1); paintKids(); markDirty(); } }, '×'))),
-    fam.children.length < 6 ? h('button', { type: 'button', class: 'btn small', onclick: () => { fam.children.push(8); paintKids(); markDirty(); } }, t('add_child')) : '');
+    fam.children.length < 6 ? h('button', { type: 'button', class: 'btn small', onclick: () => { fam.children.push(8); paintKids(); markDirty(); } }, `+ ${t('add_child')}`) : '');
   paintKids();
-  familyBox.append(h('div', { class: 'two' }, field(t('adults'), numberInput(fam, 'adults', 1, 4)), field(t('family_budget'), numberInput(fam, 'budget_eur', 50, 30000))), group(t('children'), kids));
-  const budget = section(t('s_budget'),
-    h('div', { class: 'two' }, field(t('solo_budget'), numberInput(s.budgets.solo, 'budget_eur', 30, 10000))),
+  familyBox.append(
+    h('div', { class: 'two' }, group(t('adults'), stepper(fam, 'adults', 1, 4, t('adults'))), field(t('family_budget'), numberInput(fam, 'budget_eur', 50, 30000, 1, '€'))),
+    group(t('children'), kids));
+  const budget = panel(t('tab_budget'), t('budget_hint'),
+    h('div', { class: 'two' }, field(t('solo_budget'), numberInput(s.budgets.solo, 'budget_eur', 30, 10000, 1, '€'))),
     toggle(fam, 'enabled', t('family_enable'), () => { familyBox.hidden = !fam.enabled; }),
     familyBox,
     toggle(s.budgets, 'include_transfer', t('include_transfer')),
-    h('p', { class: 'hint' }, t('budget_hint')));
+    h('h3', {}, t('s_stay')),
+    h('div', { class: 'two' },
+      group(t('min_rating'), segmented(s.stay, 'min_rating', [[7, '7+'], [7.5, '7.5+'], [8, '8+'], [8.5, '8.5+'], [9, '9+']])),
+      group(t('min_stars'), segmented(s.stay, 'min_stars', [[0, t('stars_any')], [3, '3+'], [4, '4+'], [5, '5']]))),
+    h('div', { class: 'two' },
+      field(t('min_reviews'), numberInput(s.stay, 'min_reviews', 0, 5000)),
+      group(t('breakfast'), segmented(s.stay, 'breakfast', [['any', t('bf_any')], ['prefer', t('bf_prefer')], ['require', t('bf_require')]]))));
 
+  // 4. Calendar
   const school = s.calendar.school;
-  const schoolRegion = h('div', { hidden: school.mode !== 'region' }, field(t('region'), select(school, 'region', [[null, '…'], ...geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)])])));
+  const schoolRegion = h('div', { hidden: school.mode !== 'region' }, segmented(school, 'region', geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)])));
   const schoolManual = h('div', { hidden: school.mode !== 'manual' }, rangeList(school.manual, 12, false));
-  const calendar = section(t('s_calendar'),
-    field(t('holiday_country'), select(s.calendar, 'holiday_country', geo.holiday_countries.map((c) => [c, countryName(c)]))),
+  const calendar = panel(t('tab_calendar'), t('calendar_intro'),
+    group(t('holiday_country'), segmented(s.calendar, 'holiday_country', geo.holiday_countries.map((c) => [c, countryName(c)]))),
     group(t('workdays'), chips(s.calendar.workdays, t('days').map((d, i) => [i + 1, d]), { max: 7 })),
-    group(t('max_lost'), segmented(s.calendar, 'max_lost_workdays', [[0, '0'], [1, '1'], [2, '2']])),
-    group(t('busy'), rangeList(s.calendar.busy, 30, true), t('busy_hint')),
+    group(t('max_lost'), segmented(s.calendar, 'max_lost_workdays', [[0, t('lost_0')], [1, t('lost_1')], [2, t('lost_2')]])),
     group(t('school'), h('div', {},
       segmented(school, 'mode', [['none', t('school_none')], ['region', t('school_region')], ['manual', t('school_manual')]], () => {
+        if (school.mode === 'region' && !school.region) { school.region = 'SK-BL'; schoolRegion.replaceChildren(segmented(school, 'region', geo.school_regions.SK.map((r) => [r, t(`r_${r.replace('-', '_')}`)]))); }
         schoolRegion.hidden = school.mode !== 'region';
         schoolManual.hidden = school.mode !== 'manual';
-        if (school.mode === 'region' && !school.region) { school.region = 'SK-BL'; }
-      }), schoolRegion, schoolManual)));
+      }), schoolRegion, schoolManual)),
+    group(t('busy'), rangeList(s.calendar.busy, 30, true), t('busy_hint')));
 
-  const trip = section(t('s_trip'), h('div', { class: 'three' },
-    field(t('nights_min'), numberInput(s.trip, 'nights_min', 1, 7)),
-    field(t('nights_max'), numberInput(s.trip, 'nights_max', 1, 14)),
-    field(t('horizon'), numberInput(s.trip, 'horizon_days', 14, 180))));
-
-  const stay = section(t('s_stay'), h('div', { class: 'two' },
-    field(t('min_rating'), numberInput(s.stay, 'min_rating', 6, 10, 0.1)),
-    field(t('min_reviews'), numberInput(s.stay, 'min_reviews', 0, 5000)),
-    field(t('min_stars'), select(s.stay, 'min_stars', [[0, t('stars_any')], [1, '1+'], [2, '2+'], [3, '3+'], [4, '4+'], [5, '5']]))),
-    group(t('breakfast'), segmented(s.stay, 'breakfast', [['any', t('bf_any')], ['prefer', t('bf_prefer')], ['require', t('bf_require')]])));
-
-  const weightsBox = h('div', {});
-  const paintWeights = () => weightsBox.replaceChildren(...['price', 'times', 'workdays', 'weather', 'stay', 'discount'].map((k) => slider(s.rating.weights, k, t(`w_${k}`))));
-  const PRESETS = { cheap: [10, 5, 6, 3, 3, 6], comfort: [5, 8, 7, 6, 8, 4], kids: [6, 7, 5, 7, 9, 5] };
-  const presetSeg = segmented(s.rating, 'preset', [['cheap', t('preset_cheap')], ['comfort', t('preset_comfort')], ['kids', t('preset_kids')], ['custom', t('preset_custom')]], () => {
-    const p = PRESETS[s.rating.preset];
-    if (p) ['price', 'times', 'workdays', 'weather', 'stay', 'discount'].forEach((k, i) => { s.rating.weights[k] = p[i]; });
-    paintWeights();
-  });
-  paintWeights();
-  const rating = section(t('s_rating'), h('p', { class: 'hint' }, t('rating_hint')), presetSeg,
-    h('details', { class: 'fine' }, h('summary', {}, t('fine_tune')), weightsBox));
-
+  // 5. Feeds: the digests a user picks, as cards
   const freqOptions = Object.entries(t('freq'));
-  const block = (key, extra) => {
+  const feed = (key, icon, extra) => {
     const b = s.blocks[key];
-    const body = h('div', { class: 'sub', hidden: !b.enabled }, field(t('how_often'), select(b, 'freq', freqOptions)), extra || null);
-    return h('div', { class: 'block' },
-      h('h3', {}, t(`b_${key}`)), h('p', { class: 'hint' }, t(`b_${key}_d`)),
-      toggle(b, 'enabled', t('enabled'), () => { body.hidden = !b.enabled; }), body);
+    const body = h('div', { class: 'feed-body', hidden: !b.enabled }, group(t('how_often'), segmented(b, 'freq', freqOptions)), extra || null);
+    const card = h('article', { class: `feed${b.enabled ? ' on' : ''}` });
+    const sw = toggle(b, 'enabled', t('enabled'), () => { body.hidden = !b.enabled; card.classList.toggle('on', b.enabled); });
+    card.append(h('div', { class: 'feed-head' },
+      h('span', { class: 'feed-icon', 'aria-hidden': 'true' }, icon),
+      h('div', { class: 'feed-title' }, h('h3', {}, t(`b_${key}`)), h('p', {}, t(`b_${key}_d`))),
+      sw), body);
+    return card;
   };
   const vac = s.blocks.vacation;
   const hotels = h('div', { class: 'ranges' });
   const paintHotels = () => {
     const input = h('input', { type: 'url', placeholder: 'https://www.booking.com/hotel/…', 'aria-label': t('hotel_url') });
-    const msg = h('p', { class: 'error', role: 'alert' });
+    const msg = h('p', { class: 'error small', role: 'alert' });
     const add = () => {
       const url = normalizeBooking(input.value);
       if (!url) { msg.textContent = t('hotel_bad'); return; }
       if (!vac.hotels.includes(url) && vac.hotels.length < 10) { vac.hotels.push(url); markDirty(); }
       paintHotels();
     };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
     hotels.replaceChildren(
       ...vac.hotels.map((url, i) => h('div', { class: 'hotel' },
         h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
-        h('button', { type: 'button', class: 'btn small', onclick: () => { vac.hotels.splice(i, 1); paintHotels(); markDirty(); } }, t('remove')))),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': t('remove'), onclick: () => { vac.hotels.splice(i, 1); paintHotels(); markDirty(); } }, '×'))),
       vac.hotels.length < 10 ? h('div', { class: 'row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '', msg);
   };
   paintHotels();
   const sug = vac.suggest;
   const sugBox = h('div', { class: 'sub', hidden: !sug.enabled },
     h('div', { class: 'two' },
-      field(t('suggest_max'), numberInput(sug, 'max_hotel_eur', 100, 50000)),
-      field(t('min_stars'), select(sug, 'min_stars', [[0, t('stars_any')], [3, '3+'], [4, '4+'], [5, '5']])),
-      field(t('min_rating'), numberInput(sug, 'min_rating', 6, 10, 0.1))),
+      field(t('suggest_max'), numberInput(sug, 'max_hotel_eur', 100, 50000, 1, '€')),
+      group(t('min_stars'), segmented(sug, 'min_stars', [[0, t('stars_any')], [3, '3+'], [4, '4+'], [5, '5']]))),
+    group(t('min_rating'), segmented(sug, 'min_rating', [[7.5, '7.5+'], [8, '8+'], [8.5, '8.5+'], [9, '9+']])),
     toggle(sug, 'all_inclusive', t('all_inclusive')), toggle(sug, 'aquapark', t('aquapark')));
-  const blocks = section(t('s_blocks'),
-    block('weekends'),
-    block('diamonds', field(t('max_price'), numberInput(s.blocks.diamonds, 'max_price_eur', 10, 300))),
-    block('wow', field(t('max_ppn'), numberInput(s.blocks.wow, 'max_per_person_night', 10, 500))),
-    block('vacation', h('div', {},
-      group(t('party'), segmented(vac, 'party', [['solo', t('solo')], ['family', t('family')]])),
-      group(t('dates'), rangeList(vac.date_options, 4, false)),
-      group(t('vac_countries'), countryPicker(vac.countries, 30)),
-      group(t('hotels'), hotels),
-      toggle(sug, 'enabled', t('suggest'), () => { sugBox.hidden = !sug.enabled; }), sugBox,
-      h('p', { class: 'hint' }, t('hotel_price_note')))));
+  const feeds = panel(t('tab_feeds'), t('feeds_intro'),
+    h('div', { class: 'feeds' },
+      feed('weekends', '🌊'),
+      feed('diamonds', '💎', field(t('max_price'), numberInput(s.blocks.diamonds, 'max_price_eur', 10, 300, 1, '€'))),
+      feed('wow', '🔥', field(t('max_ppn'), numberInput(s.blocks.wow, 'max_per_person_night', 10, 500, 1, '€'))),
+      feed('vacation', '🌴', h('div', {},
+        group(t('party'), segmented(vac, 'party', [['solo', t('solo')], ['family', t('family')]])),
+        group(t('dates'), rangeList(vac.date_options, 4, false)),
+        group(t('vac_countries'), countryPicker(vac.countries, 30)),
+        group(t('hotels'), hotels),
+        toggle(sug, 'enabled', t('suggest'), () => { sugBox.hidden = !sug.enabled; }), sugBox,
+        h('p', { class: 'hint' }, t('hotel_price_note'))))));
 
-  const digest = section(t('s_digest'), h('p', { class: 'hint' }, t('digest_hint')), h('div', { class: 'two' },
-    field(t('hour'), select(s.digest, 'hour', Array.from({ length: 18 }, (_, i) => [i + 5, `${String(i + 5).padStart(2, '0')}:00`]))),
-    field(t('weekly_day'), select(s.digest, 'weekly_day', t('days_full').map((d, i) => [i + 1, d])))));
+  // 6. Scoring: presets as cards, sliders folded away
+  const KEYS = ['price', 'times', 'workdays', 'weather', 'stay', 'discount'];
+  const PRESETS = { cheap: [10, 5, 6, 3, 3, 6], comfort: [5, 8, 7, 6, 8, 4], kids: [6, 7, 5, 7, 9, 5] };
+  const weightsBox = h('div', {});
+  const paintWeights = () => weightsBox.replaceChildren(...KEYS.map((k) => slider(s.rating.weights, k, t(`w_${k}`))));
+  const presetCards = h('div', { class: 'presets', role: 'radiogroup' });
+  paintPresets = () => presetCards.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.preset === s.rating.preset)));
+  for (const p of ['cheap', 'comfort', 'kids', 'custom']) {
+    presetCards.append(h('button', {
+      type: 'button', role: 'radio', class: 'preset', 'data-preset': p,
+      onclick: () => {
+        s.rating.preset = p;
+        if (PRESETS[p]) KEYS.forEach((k, i) => { s.rating.weights[k] = PRESETS[p][i]; });
+        paintWeights(); paintPresets(); markDirty();
+        if (p === 'custom') fine.open = true;
+      },
+    }, h('strong', {}, t(`preset_${p}`)), h('span', {}, t(`preset_${p}_d`))));
+  }
+  paintWeights(); paintPresets();
+  const fine = h('details', { class: 'fine' }, h('summary', {}, t('fine_tune')), weightsBox);
+  const score = panel(t('tab_score'), t('rating_hint'), presetCards, fine);
 
+  // 7. Messages and account
   const pausedBox = { paused: me.paused };
-  const account = section(t('s_account'),
+  const digest = panel(t('tab_digest'), t('digest_hint'),
+    h('div', { class: 'two' },
+      field(t('hour'), select(s.digest, 'hour', Array.from({ length: 18 }, (_, i) => [i + 5, `${String(i + 5).padStart(2, '0')}:00`]))),
+      group(t('weekly_day'), segmented(s.digest, 'weekly_day', t('days').map((d, i) => [i + 1, d])))),
+    h('h3', {}, t('s_account')),
     toggle(pausedBox, 'paused', t('pause'), async () => {
       const res = await api('POST', '/v1/pause', { paused: pausedBox.paused });
       if (res.ok) me.paused = pausedBox.paused;
@@ -478,7 +622,36 @@ function settingsView() {
         if (res.ok) { store.del('localStorage', TOKEN_KEY); me = null; render(); }
       } }, t('delete'))));
 
-  return h('div', { class: 'wrap narrow settings' }, status, profile, where, budget, calendar, trip, stay, rating, blocks, digest, account, saveBar());
+  const panels = { from, where, budget, calendar, feeds, score, digest };
+  const nav = h('nav', { class: 'tabs', 'aria-label': t('settings_nav') });
+  const content = h('div', { class: 'tab-content' });
+  const stepLine = h('p', { class: 'step-line' });
+  const prev = h('button', { type: 'button', class: 'btn' }, `← ${t('back')}`);
+  const next = h('button', { type: 'button', class: 'btn primary' });
+  const show = (name, scroll) => {
+    tab = name;
+    store.set('sessionStorage', 'wew.tab', name);
+    const i = TABS.indexOf(name);
+    nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === name ? 'step' : 'false'));
+    for (const [k, p] of Object.entries(panels)) p.hidden = k !== name;
+    stepLine.textContent = fmt('step_of', { n: i + 1, m: TABS.length });
+    prev.hidden = i === 0;
+    next.textContent = i === TABS.length - 1 ? (me.configured ? t('save') : t('finish')) : `${t('next')}: ${t(`tab_${TABS[i + 1]}`)} →`;
+    const active = nav.querySelector(`[data-tab="${name}"]`);
+    if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (scroll) window.scrollTo({ top: 0 });
+  };
+  TABS.forEach((name, i) => nav.append(h('button', { type: 'button', 'data-tab': name, onclick: () => show(name, true) },
+    h('span', { class: 'num' }, String(i + 1)), t(`tab_${name}`))));
+  prev.addEventListener('click', () => show(TABS[Math.max(0, TABS.indexOf(tab) - 1)], true));
+  next.addEventListener('click', () => {
+    const i = TABS.indexOf(tab);
+    if (i === TABS.length - 1) save(); else show(TABS[i + 1], true);
+  });
+  content.append(...Object.values(panels), h('div', { class: 'pager' }, prev, stepLine, next));
+  const view = h('div', { class: 'wrap settings' }, status, h('div', { class: 'layout' }, nav, content), saveBar());
+  show(tab, false);
+  return view;
 }
 
 function normalizeBooking(value) {

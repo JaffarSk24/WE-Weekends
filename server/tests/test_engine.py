@@ -204,3 +204,22 @@ def test_engine_end_to_end(env):
     before = len(tg.sent)
     engine.send_digest(42, "ru", users[0][2], date.today(), first=False)
     assert "NAP" not in "\n".join(m[1] for m in tg.sent[before:])
+
+
+def test_exclusions_match_whole_words():
+    from weekends.engine.places import Exclusions, place_of
+    ex = Exclusions(["kemer", "side", "palermo"])
+    assert ex.hits("Rixos_Sungate-Kemer_Turkish_Mediterranean_Coast")
+    assert not ex.hits("Seaside_Resort-Belek_Serik")
+    assert ex.destination("PMO", "Palermo") and not ex.destination("NAP", "Naples")
+    assert place_of("Rixos Sungate Kemer Turkish Mediterranean Coast") == "kemer"
+
+
+def test_excluded_places_are_validated(env):
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["geography"]["exclude_places"] = ["kemer"]
+    assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 200
+    s["geography"]["exclude_places"] = ["atlantis"]
+    assert client.put("/v1/settings", json={"version": 1, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 422

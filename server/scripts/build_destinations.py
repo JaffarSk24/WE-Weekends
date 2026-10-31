@@ -54,6 +54,39 @@ for i in range(0, len(codes), 60):
             d["ta"] = "g" + v["ta"]
     time.sleep(2)
 
+# Airports often point at the municipality they stand in (Palermo airport is
+# in Cinisi), so cities still without a TripAdvisor id are looked up again by
+# the city name Kiwi uses and the country code.
+BY_NAME = """SELECT ?label ?cc ?ta WHERE {
+  VALUES (?label ?cc) { %s }
+  ?item rdfs:label ?label; wdt:P3134 ?ta; wdt:P17 ?country.
+  ?country wdt:P297 ?cc.
+}"""
+missing = [c for c in codes if not found.get(c, {}).get("ta")]
+for i in range(0, len(missing), 25):
+    chunk = missing[i:i + 25]
+    pairs = " ".join(f'("{routes[c]["city"]}"@en "{routes[c]["country"]}")' for c in chunk if '"' not in routes[c]["city"])
+    if not pairs:
+        continue
+    url = "https://query.wikidata.org/sparql?" + urllib.parse.urlencode({"query": BY_NAME % pairs})
+    request = urllib.request.Request(url, headers={"Accept": "application/sparql-results+json",
+                                                   "User-Agent": "WE-Weekends-data-build/1.0 (welcome@whiteeagles.sk)"})
+    with urllib.request.urlopen(request, timeout=90) as response:  # noqa: S310 (fixed https URL)
+        rows = json.load(response)["results"]["bindings"]
+    by_name = {}
+    for row in rows:
+        ta = row["ta"]["value"]
+        if ta.isdigit():
+            by_name.setdefault((row["label"]["value"], row["cc"]["value"]), "g" + ta)
+    for c in chunk:
+        key = (routes[c]["city"], routes[c]["country"])
+        if key in by_name:
+            found.setdefault(c, {"names": {}})["ta"] = by_name[key]
+    time.sleep(2)
+
+# Ids verified earlier (see weekends/data/tripadvisor.json history) are kept:
+# Wikidata lacks many cities, those were matched against Xotelo hotel pages.
+previous = json.loads((DATA / "tripadvisor.json").read_text(encoding="utf-8")) if (DATA / "tripadvisor.json").is_file() else {}
 destinations, tripadvisor = {}, {}
 for code in codes:
     d = found.get(code, {"names": {}})
@@ -66,6 +99,8 @@ for code in codes:
     }
     if d.get("ta"):
         tripadvisor[code] = d["ta"]
+    elif code in previous:
+        tripadvisor[code] = previous[code]
 (DATA / "destinations.json").write_text(json.dumps(destinations, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
 (DATA / "tripadvisor.json").write_text(json.dumps(tripadvisor, indent=1, sort_keys=True), encoding="utf-8")
 print(len(destinations), "destinations,", sum(1 for d in destinations.values() if d["lat"]), "with coordinates,",

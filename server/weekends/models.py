@@ -40,6 +40,7 @@ GROUPS = frozenset(GEO["groups"])
 HOLIDAY_COUNTRIES = frozenset(GEO["holiday_countries"])
 EU_RESIDENCE = frozenset(GEO["eu_residence"])
 COUNTRIES = frozenset(GEO["countries"])
+PLACES = frozenset(GEO.get("places", {}))
 SCHOOL_REGIONS = frozenset(r for regions in GEO["school_regions"].values() for r in regions)
 
 Lang = Literal["ru", "sk", "en"]
@@ -69,6 +70,15 @@ def _group(value: str) -> str:
 
 Airport = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$"), AfterValidator(_airport)]
 Group = Annotated[str, StringConstraints(pattern=r"^[A-Z_]{2,20}$"), AfterValidator(_group)]
+
+
+def _place(value: str) -> str:
+    if value not in PLACES:
+        raise ValueError("unknown place")
+    return value
+
+
+Place = Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]{2,40}$"), AfterValidator(_place)]
 
 
 def _unique(values: list) -> list:
@@ -124,6 +134,7 @@ class Geography(Strict):
     groups: Annotated[list[Group], Field(max_length=20), AfterValidator(_unique)] = ["EUROPE", "NORTH_AFRICA", "MIDDLE_EAST", "CAUCASUS"]
     include: Annotated[list[ISO2], Field(max_length=250), AfterValidator(_unique)] = []
     exclude: Annotated[list[ISO2], Field(max_length=250), AfterValidator(_unique)] = []
+    exclude_places: Annotated[list[Place], Field(max_length=50), AfterValidator(_unique)] = []
 
 
 class Solo(Strict):

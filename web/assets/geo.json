@@ -619,5 +619,2722 @@
   "ZA",
   "ZM",
   "ZW"
- ]
+ ],
+ "places": {
+  "abu_dhabi": {
+   "en": "Abu Dhabi",
+   "ru": "Абу-Даби",
+   "sk": "Abú Zabí",
+   "country": "AE",
+   "match": [
+    "abu_dhabi"
+   ],
+   "iata": "AUH"
+  },
+  "addis_ababa": {
+   "en": "Addis Ababa",
+   "ru": "Аддис-Абеба",
+   "sk": "Addis Abeba",
+   "country": "ET",
+   "match": [
+    "addis_ababa"
+   ],
+   "iata": "ADD"
+  },
+  "agadir": {
+   "en": "Agadir",
+   "ru": "Агадир",
+   "sk": "Agadir",
+   "country": "MA",
+   "match": [
+    "agadir"
+   ],
+   "iata": "AGA"
+  },
+  "agia_napa": {
+   "en": "Agia Napa",
+   "ru": "Айя-Напа",
+   "sk": "Ayia Napa",
+   "country": "CY",
+   "match": [
+    "agia_napa",
+    "ayia_napa"
+   ]
+  },
+  "ajaccio": {
+   "en": "Ajaccio",
+   "ru": "Аяччо",
+   "sk": "Ajaccio",
+   "country": "FR",
+   "match": [
+    "ajaccio"
+   ],
+   "iata": "AJA"
+  },
+  "alanya": {
+   "en": "Alanya",
+   "ru": "Аланья",
+   "sk": "Alanya",
+   "country": "TR",
+   "match": [
+    "alanya"
+   ]
+  },
+  "albena": {
+   "en": "Albena",
+   "ru": "Албена",
+   "sk": "Albena",
+   "country": "BG",
+   "match": [
+    "albena"
+   ]
+  },
+  "albufeira": {
+   "en": "Albufeira",
+   "ru": "Албуфейра",
+   "sk": "Albufeira",
+   "country": "PT",
+   "match": [
+    "albufeira"
+   ]
+  },
+  "alghero": {
+   "en": "Alghero",
+   "ru": "Альгеро",
+   "sk": "Alghero",
+   "country": "IT",
+   "match": [
+    "alghero"
+   ],
+   "iata": "AHO"
+  },
+  "algiers": {
+   "en": "Algiers",
+   "ru": "Алжир",
+   "sk": "Alžír",
+   "country": "DZ",
+   "match": [
+    "algiers"
+   ],
+   "iata": "ALG"
+  },
+  "alicante": {
+   "en": "Alicante",
+   "ru": "Аликанте",
+   "sk": "Alicante",
+   "country": "ES",
+   "match": [
+    "alicante"
+   ],
+   "iata": "ALC"
+  },
+  "almaty": {
+   "en": "Almaty",
+   "ru": "Алма-Ата",
+   "sk": "Almati",
+   "country": "KZ",
+   "match": [
+    "almaty"
+   ],
+   "iata": "ALA"
+  },
+  "amalfi": {
+   "en": "Amalfi",
+   "ru": "Амальфи",
+   "sk": "Amalfi",
+   "country": "IT",
+   "match": [
+    "amalfi"
+   ]
+  },
+  "amman": {
+   "en": "Amman",
+   "ru": "Амман",
+   "sk": "Ammán",
+   "country": "JO",
+   "match": [
+    "amman"
+   ],
+   "iata": "AMM"
+  },
+  "amsterdam": {
+   "en": "Amsterdam",
+   "ru": "Амстердам",
+   "sk": "Amsterdam",
+   "country": "NL",
+   "match": [
+    "amsterdam"
+   ],
+   "iata": "AMS"
+  },
+  "ankara": {
+   "en": "Ankara",
+   "ru": "Анкара",
+   "sk": "Ankara",
+   "country": "TR",
+   "match": [
+    "ankara"
+   ],
+   "iata": "ESB"
+  },
+  "antalya": {
+   "en": "Antalya",
+   "ru": "Анталья",
+   "sk": "Antalya",
+   "country": "TR",
+   "match": [
+    "antalya"
+   ],
+   "iata": "AYT"
+  },
+  "arrecife": {
+   "en": "Arrecife",
+   "ru": "Арресифе",
+   "sk": "Arrecife",
+   "country": "ES",
+   "match": [
+    "arrecife"
+   ],
+   "iata": "ACE"
+  },
+  "astana": {
+   "en": "Astana",
+   "ru": "Астана",
+   "sk": "Astana",
+   "country": "KZ",
+   "match": [
+    "astana"
+   ],
+   "iata": "NQZ"
+  },
+  "athens": {
+   "en": "Athens",
+   "ru": "Афины",
+   "sk": "Atény",
+   "country": "GR",
+   "match": [
+    "athens"
+   ],
+   "iata": "ATH"
+  },
+  "baku": {
+   "en": "Baku",
+   "ru": "Баку",
+   "sk": "Baku",
+   "country": "AZ",
+   "match": [
+    "baku"
+   ],
+   "iata": "GYD"
+  },
+  "bangkok": {
+   "en": "Bangkok",
+   "ru": "Бангкок",
+   "sk": "Bangkok",
+   "country": "TH",
+   "match": [
+    "bangkok"
+   ],
+   "iata": "BKK"
+  },
+  "banja_luka": {
+   "en": "Banja Luka",
+   "ru": "Баня-Лука",
+   "sk": "Banja Luka",
+   "country": "BA",
+   "match": [
+    "banja_luka"
+   ],
+   "iata": "BNX"
+  },
+  "barcelona": {
+   "en": "Barcelona",
+   "ru": "Барселона",
+   "sk": "Barcelona",
+   "country": "ES",
+   "match": [
+    "barcelona"
+   ],
+   "iata": "BCN"
+  },
+  "bari": {
+   "en": "Bari",
+   "ru": "Бари",
+   "sk": "Bari",
+   "country": "IT",
+   "match": [
+    "bari"
+   ],
+   "iata": "BRI"
+  },
+  "basel": {
+   "en": "Basel",
+   "ru": "Базель",
+   "sk": "Bazilej",
+   "country": "CH",
+   "match": [
+    "basel"
+   ],
+   "iata": "BSL"
+  },
+  "batumi": {
+   "en": "Batumi",
+   "ru": "Батуми",
+   "sk": "Batumi",
+   "country": "GE",
+   "match": [
+    "batumi"
+   ]
+  },
+  "beauvais": {
+   "en": "Beauvais",
+   "ru": "Бове",
+   "sk": "Beauvais",
+   "country": "FR",
+   "match": [
+    "beauvais"
+   ],
+   "iata": "BVA"
+  },
+  "becici": {
+   "en": "Becici",
+   "ru": "Бечичи",
+   "sk": "Bečići",
+   "country": "ME",
+   "match": [
+    "becici"
+   ]
+  },
+  "beijing": {
+   "en": "Beijing",
+   "ru": "Пекин",
+   "sk": "Peking",
+   "country": "CN",
+   "match": [
+    "beijing"
+   ],
+   "iata": "PEK"
+  },
+  "beirut": {
+   "en": "Beirut",
+   "ru": "Бейрут",
+   "sk": "Bejrút",
+   "country": "LB",
+   "match": [
+    "beirut"
+   ],
+   "iata": "BEY"
+  },
+  "belek": {
+   "en": "Belek",
+   "ru": "Белек",
+   "sk": "Belek",
+   "country": "TR",
+   "match": [
+    "belek"
+   ]
+  },
+  "belfast": {
+   "en": "Belfast",
+   "ru": "Белфаст",
+   "sk": "Belfast",
+   "country": "GB",
+   "match": [
+    "belfast"
+   ],
+   "iata": "BFS"
+  },
+  "belgrade": {
+   "en": "Belgrade",
+   "ru": "Белград",
+   "sk": "Belehrad",
+   "country": "RS",
+   "match": [
+    "belgrade"
+   ],
+   "iata": "BEG"
+  },
+  "benidorm": {
+   "en": "Benidorm",
+   "ru": "Бенидорм",
+   "sk": "Benidorm",
+   "country": "ES",
+   "match": [
+    "benidorm"
+   ]
+  },
+  "bergamo": {
+   "en": "Bergamo",
+   "ru": "Бергамо",
+   "sk": "Bergamo",
+   "country": "IT",
+   "match": [
+    "bergamo"
+   ],
+   "iata": "BGY"
+  },
+  "bergen": {
+   "en": "Bergen",
+   "ru": "Берген",
+   "sk": "Bergen",
+   "country": "NO",
+   "match": [
+    "bergen"
+   ],
+   "iata": "BGO"
+  },
+  "berlin": {
+   "en": "Berlin",
+   "ru": "Берлин",
+   "sk": "Berlín",
+   "country": "DE",
+   "match": [
+    "berlin"
+   ],
+   "iata": "BER"
+  },
+  "bilbao": {
+   "en": "Bilbao",
+   "ru": "Бильбао",
+   "sk": "Bilbao",
+   "country": "ES",
+   "match": [
+    "bilbao"
+   ],
+   "iata": "BIO"
+  },
+  "billund": {
+   "en": "Billund",
+   "ru": "Биллунн",
+   "sk": "Billund",
+   "country": "DK",
+   "match": [
+    "billund"
+   ],
+   "iata": "BLL"
+  },
+  "birmingham": {
+   "en": "Birmingham",
+   "ru": "Бирмингем",
+   "sk": "Birmingham",
+   "country": "GB",
+   "match": [
+    "birmingham"
+   ],
+   "iata": "BHX"
+  },
+  "bodrum": {
+   "en": "Bodrum",
+   "ru": "Бодрум",
+   "sk": "Bodrum",
+   "country": "TR",
+   "match": [
+    "bodrum"
+   ]
+  },
+  "bologna": {
+   "en": "Bologna",
+   "ru": "Болонья",
+   "sk": "Bologna",
+   "country": "IT",
+   "match": [
+    "bologna"
+   ],
+   "iata": "BLQ"
+  },
+  "bordeaux": {
+   "en": "Bordeaux",
+   "ru": "Бордо",
+   "sk": "Bordeaux",
+   "country": "FR",
+   "match": [
+    "bordeaux"
+   ],
+   "iata": "BOD"
+  },
+  "boston": {
+   "en": "Boston",
+   "ru": "Бостон",
+   "sk": "Boston",
+   "country": "US",
+   "match": [
+    "boston"
+   ],
+   "iata": "BOS"
+  },
+  "bournemouth": {
+   "en": "Bournemouth",
+   "ru": "Борнмут",
+   "sk": "Bournemouth",
+   "country": "GB",
+   "match": [
+    "bournemouth"
+   ],
+   "iata": "BOH"
+  },
+  "brasov": {
+   "en": "Brașov",
+   "ru": "Брашов",
+   "sk": "Brašov",
+   "country": "RO",
+   "match": [
+    "brasov"
+   ],
+   "iata": "GHV"
+  },
+  "bremen": {
+   "en": "Bremen",
+   "ru": "Бремен",
+   "sk": "Brémy",
+   "country": "DE",
+   "match": [
+    "bremen"
+   ],
+   "iata": "BRE"
+  },
+  "bristol": {
+   "en": "Bristol",
+   "ru": "Бристоль",
+   "sk": "Bristol",
+   "country": "GB",
+   "match": [
+    "bristol"
+   ],
+   "iata": "BRS"
+  },
+  "brussels": {
+   "en": "Brussels",
+   "ru": "Шарлеруа",
+   "sk": "Charleroi",
+   "country": "BE",
+   "match": [
+    "brussels"
+   ],
+   "iata": "CRL"
+  },
+  "bucharest": {
+   "en": "Bucharest",
+   "ru": "Бухарест",
+   "sk": "Bukurešť",
+   "country": "RO",
+   "match": [
+    "bucharest"
+   ],
+   "iata": "BBU"
+  },
+  "budapest": {
+   "en": "Budapest",
+   "ru": "Будапешт",
+   "sk": "Budapešť",
+   "country": "HU",
+   "match": [
+    "budapest"
+   ],
+   "iata": "BUD"
+  },
+  "budva": {
+   "en": "Budva",
+   "ru": "Будва",
+   "sk": "Budva",
+   "country": "ME",
+   "match": [
+    "budva"
+   ]
+  },
+  "burgas": {
+   "en": "Burgas",
+   "ru": "Бургас",
+   "sk": "Burgas",
+   "country": "BG",
+   "match": [
+    "burgas"
+   ]
+  },
+  "cagliari": {
+   "en": "Cagliari",
+   "ru": "Кальяри",
+   "sk": "Cagliari",
+   "country": "IT",
+   "match": [
+    "cagliari"
+   ],
+   "iata": "CAG"
+  },
+  "cairo": {
+   "en": "Cairo",
+   "ru": "Каир",
+   "sk": "Káhira",
+   "country": "EG",
+   "match": [
+    "cairo"
+   ],
+   "iata": "CAI"
+  },
+  "castellon_de_la_plana": {
+   "en": "Castellón de la Plana",
+   "ru": "Кастельон-де-ла-Плана",
+   "sk": "Castellón de la Plana",
+   "country": "ES",
+   "match": [
+    "castellon_de_la_plana"
+   ],
+   "iata": "CDT"
+  },
+  "catania": {
+   "en": "Catania",
+   "ru": "Катания",
+   "sk": "Catania",
+   "country": "IT",
+   "match": [
+    "catania"
+   ],
+   "iata": "CTA"
+  },
+  "cefalu": {
+   "en": "Cefalu",
+   "ru": "Чефалу",
+   "sk": "Cefalù",
+   "country": "IT",
+   "match": [
+    "cefalu"
+   ]
+  },
+  "cesme": {
+   "en": "Cesme",
+   "ru": "Чешме",
+   "sk": "Cesme",
+   "country": "TR",
+   "match": [
+    "cesme"
+   ]
+  },
+  "chania": {
+   "en": "Chania",
+   "ru": "Ханья",
+   "sk": "Chania",
+   "country": "GR",
+   "match": [
+    "chania"
+   ],
+   "iata": "CHQ"
+  },
+  "chengdu": {
+   "en": "Chengdu",
+   "ru": "Чэнду",
+   "sk": "Čcheng-tu",
+   "country": "CN",
+   "match": [
+    "chengdu"
+   ],
+   "iata": "TFU"
+  },
+  "chicago": {
+   "en": "Chicago",
+   "ru": "Чикаго",
+   "sk": "Chicago",
+   "country": "US",
+   "match": [
+    "chicago"
+   ],
+   "iata": "ORD"
+  },
+  "chisinau": {
+   "en": "Chișinău",
+   "ru": "Кишинёв",
+   "sk": "Kišiňov",
+   "country": "MD",
+   "match": [
+    "chisinau"
+   ],
+   "iata": "RMO"
+  },
+  "chongqing": {
+   "en": "Chongqing",
+   "ru": "Чунцин",
+   "sk": "Čchung-čching",
+   "country": "CN",
+   "match": [
+    "chongqing"
+   ],
+   "iata": "CKG"
+  },
+  "cologne": {
+   "en": "Cologne",
+   "ru": "Кёльн",
+   "sk": "Kolín nad Rýnom",
+   "country": "DE",
+   "match": [
+    "cologne"
+   ],
+   "iata": "CGN"
+  },
+  "copenhagen": {
+   "en": "Copenhagen",
+   "ru": "Копенгаген",
+   "sk": "Kodaň",
+   "country": "DK",
+   "match": [
+    "copenhagen"
+   ],
+   "iata": "CPH"
+  },
+  "corfu": {
+   "en": "Corfu",
+   "ru": "Керкира",
+   "sk": "Korfu",
+   "country": "GR",
+   "match": [
+    "corfu"
+   ],
+   "iata": "CFU"
+  },
+  "cork": {
+   "en": "Cork",
+   "ru": "Корк",
+   "sk": "Cork",
+   "country": "IE",
+   "match": [
+    "cork"
+   ],
+   "iata": "ORK"
+  },
+  "corralejo": {
+   "en": "Corralejo",
+   "ru": "Корралехо",
+   "sk": "Corralejo",
+   "country": "ES",
+   "match": [
+    "corralejo"
+   ]
+  },
+  "costa_adeje": {
+   "en": "Costa Adeje",
+   "ru": "Коста-Адехе",
+   "sk": "Costa Adeje",
+   "country": "ES",
+   "match": [
+    "costa_adeje"
+   ]
+  },
+  "djerba": {
+   "en": "Djerba",
+   "ru": "Джерба",
+   "sk": "Djerba",
+   "country": "TN",
+   "match": [
+    "djerba"
+   ]
+  },
+  "doha": {
+   "en": "Doha",
+   "ru": "Доха",
+   "sk": "Dauha",
+   "country": "QA",
+   "match": [
+    "doha"
+   ],
+   "iata": "DOH"
+  },
+  "dortmund": {
+   "en": "Dortmund",
+   "ru": "Дортмунд",
+   "sk": "Dortmund",
+   "country": "DE",
+   "match": [
+    "dortmund"
+   ],
+   "iata": "DTM"
+  },
+  "dubai": {
+   "en": "Dubai",
+   "ru": "Дубай",
+   "sk": "Dubaj",
+   "country": "AE",
+   "match": [
+    "dubai"
+   ],
+   "iata": "DXB"
+  },
+  "dublin": {
+   "en": "Dublin",
+   "ru": "Дублин",
+   "sk": "Dublin",
+   "country": "IE",
+   "match": [
+    "dublin"
+   ],
+   "iata": "DUB"
+  },
+  "dubrovnik": {
+   "en": "Dubrovnik",
+   "ru": "Дубровник",
+   "sk": "Dubrovník",
+   "country": "HR",
+   "match": [
+    "dubrovnik"
+   ],
+   "iata": "DBV"
+  },
+  "durres": {
+   "en": "Durres",
+   "ru": "Дуррес",
+   "sk": "Drač",
+   "country": "AL",
+   "match": [
+    "drac",
+    "durres"
+   ]
+  },
+  "dusseldorf": {
+   "en": "Düsseldorf",
+   "ru": "Дюссельдорф",
+   "sk": "Düsseldorf",
+   "country": "DE",
+   "match": [
+    "dusseldorf"
+   ],
+   "iata": "DUS"
+  },
+  "eastern_norway": {
+   "en": "Eastern Norway",
+   "ru": "Эстланн",
+   "sk": "Østlandet",
+   "country": "NO",
+   "match": [
+    "eastern_norway"
+   ],
+   "iata": "OSL"
+  },
+  "edinburgh": {
+   "en": "Edinburgh",
+   "ru": "Эдинбург",
+   "sk": "Edinburgh",
+   "country": "GB",
+   "match": [
+    "edinburgh"
+   ],
+   "iata": "EDI"
+  },
+  "eindhoven": {
+   "en": "Eindhoven",
+   "ru": "Эйндховен",
+   "sk": "Eindhoven",
+   "country": "NL",
+   "match": [
+    "eindhoven"
+   ],
+   "iata": "EIN"
+  },
+  "el_gouna": {
+   "en": "El Gouna",
+   "ru": "Эль-Гуна",
+   "sk": "El Gouna",
+   "country": "EG",
+   "match": [
+    "el_gouna"
+   ]
+  },
+  "erbil": {
+   "en": "Erbil",
+   "ru": "Эрбиль",
+   "sk": "Arbíl",
+   "country": "IQ",
+   "match": [
+    "erbil"
+   ],
+   "iata": "EBL"
+  },
+  "faro": {
+   "en": "Faro",
+   "ru": "Фару",
+   "sk": "Faro",
+   "country": "PT",
+   "match": [
+    "faro"
+   ],
+   "iata": "FAO"
+  },
+  "fethiye": {
+   "en": "Fethiye",
+   "ru": "Фетхие",
+   "sk": "Fethiye",
+   "country": "TR",
+   "match": [
+    "fethiye"
+   ]
+  },
+  "florence": {
+   "en": "Florence",
+   "ru": "Флоренция",
+   "sk": "Florencia",
+   "country": "IT",
+   "match": [
+    "florence"
+   ],
+   "iata": "FLR"
+  },
+  "frankfurt": {
+   "en": "Frankfurt",
+   "ru": "Франкфурт-на-Майне",
+   "sk": "Frankfurt nad Mohanom",
+   "country": "DE",
+   "match": [
+    "frankfurt"
+   ],
+   "iata": "FRA"
+  },
+  "fuerteventura": {
+   "en": "Fuerteventura",
+   "ru": "Фуэртевентура",
+   "sk": "Fuerteventura",
+   "country": "ES",
+   "match": [
+    "fuerteventura"
+   ],
+   "iata": "FUE"
+  },
+  "funchal": {
+   "en": "Funchal",
+   "ru": "Фуншал",
+   "sk": "Funchal",
+   "country": "PT",
+   "match": [
+    "funchal"
+   ],
+   "iata": "FNC"
+  },
+  "galicia": {
+   "en": "Galicia",
+   "ru": "Галисия",
+   "sk": "Galícia",
+   "country": "ES",
+   "match": [
+    "galicia"
+   ],
+   "iata": "SCQ"
+  },
+  "gdansk": {
+   "en": "Gdańsk",
+   "ru": "Гданьск",
+   "sk": "Gdansk",
+   "country": "PL",
+   "match": [
+    "gdansk"
+   ],
+   "iata": "GDN"
+  },
+  "geneva": {
+   "en": "Geneva",
+   "ru": "Женева",
+   "sk": "Ženeva",
+   "country": "CH",
+   "match": [
+    "geneva"
+   ],
+   "iata": "GVA"
+  },
+  "glasgow": {
+   "en": "Glasgow",
+   "ru": "Глазго",
+   "sk": "Glasgow",
+   "country": "GB",
+   "match": [
+    "glasgow"
+   ],
+   "iata": "GLA"
+  },
+  "golden_sands": {
+   "en": "Golden Sands",
+   "ru": "Золотые Пески",
+   "sk": "Zlaté piesky",
+   "country": "BG",
+   "match": [
+    "golden_sands",
+    "zlate_piesky"
+   ]
+  },
+  "gothenburg": {
+   "en": "Gothenburg",
+   "ru": "Гётеборг",
+   "sk": "Göteborg",
+   "country": "SE",
+   "match": [
+    "gothenburg"
+   ],
+   "iata": "GOT"
+  },
+  "guangzhou": {
+   "en": "Guangzhou",
+   "ru": "Гуанчжоу",
+   "sk": "Kanton",
+   "country": "CN",
+   "match": [
+    "guangzhou"
+   ],
+   "iata": "CAN"
+  },
+  "hamburg": {
+   "en": "Hamburg",
+   "ru": "Гамбург",
+   "sk": "Hamburg",
+   "country": "DE",
+   "match": [
+    "hamburg"
+   ],
+   "iata": "HAM"
+  },
+  "hammamet": {
+   "en": "Hammamet",
+   "ru": "Хаммамет",
+   "sk": "Hammamet",
+   "country": "TN",
+   "match": [
+    "hammamet"
+   ]
+  },
+  "hanoi": {
+   "en": "Hanoi",
+   "ru": "Ханой",
+   "sk": "Hanoj",
+   "country": "VN",
+   "match": [
+    "hanoi"
+   ],
+   "iata": "HAN"
+  },
+  "hanover": {
+   "en": "Hanover",
+   "ru": "Ганновер",
+   "sk": "Hannover",
+   "country": "DE",
+   "match": [
+    "hanover"
+   ],
+   "iata": "HAJ"
+  },
+  "helsinki": {
+   "en": "Helsinki",
+   "ru": "Хельсинки",
+   "sk": "Helsinki",
+   "country": "FI",
+   "match": [
+    "helsinki"
+   ],
+   "iata": "HEL"
+  },
+  "heraklion": {
+   "en": "Heraklion",
+   "ru": "Ираклион",
+   "sk": "Iraklio",
+   "country": "GR",
+   "match": [
+    "heraklion"
+   ],
+   "iata": "HER"
+  },
+  "herceg_novi": {
+   "en": "Herceg Novi",
+   "ru": "Херцег-Нови",
+   "sk": "Herceg Novi",
+   "country": "ME",
+   "match": [
+    "herceg_novi"
+   ]
+  },
+  "hersonissos": {
+   "en": "Hersonissos",
+   "ru": "Херсониссос",
+   "sk": "Chersonissos",
+   "country": "GR",
+   "match": [
+    "chersonissos",
+    "hersonissos"
+   ]
+  },
+  "houston": {
+   "en": "Houston",
+   "ru": "Хьюстон",
+   "sk": "Houston",
+   "country": "EG",
+   "match": [
+    "houston"
+   ],
+   "iata": "SPX"
+  },
+  "hurghada": {
+   "en": "Hurghada",
+   "ru": "Хургада",
+   "sk": "Hurgada",
+   "country": "EG",
+   "match": [
+    "hurghada"
+   ],
+   "iata": "HRG"
+  },
+  "hvar": {
+   "en": "Hvar",
+   "ru": "Хвар",
+   "sk": "Hvar",
+   "country": "HR",
+   "match": [
+    "hvar"
+   ]
+  },
+  "iasi": {
+   "en": "Iași",
+   "ru": "Яссы",
+   "sk": "Jasy",
+   "country": "RO",
+   "match": [
+    "iasi"
+   ],
+   "iata": "IAS"
+  },
+  "ibiza": {
+   "en": "Ibiza",
+   "ru": "Ивиса",
+   "sk": "Ibiza",
+   "country": "ES",
+   "match": [
+    "ibiza"
+   ],
+   "iata": "IBZ"
+  },
+  "innsbruck": {
+   "en": "Innsbruck",
+   "ru": "Инсбрук",
+   "sk": "Innsbruck",
+   "country": "AT",
+   "match": [
+    "innsbruck"
+   ],
+   "iata": "INN"
+  },
+  "istanbul": {
+   "en": "Istanbul",
+   "ru": "Стамбул",
+   "sk": "Istanbul",
+   "country": "TR",
+   "match": [
+    "istanbul"
+   ],
+   "iata": "IST"
+  },
+  "ivalo": {
+   "en": "Ivalo",
+   "ru": "Ивало",
+   "sk": "Ivalo",
+   "country": "FI",
+   "match": [
+    "ivalo"
+   ],
+   "iata": "IVL"
+  },
+  "izmir": {
+   "en": "İzmir",
+   "ru": "Измир",
+   "sk": "Izmir",
+   "country": "TR",
+   "match": [
+    "izmir"
+   ],
+   "iata": "ADB"
+  },
+  "jeddah": {
+   "en": "Jeddah",
+   "ru": "Джидда",
+   "sk": "Džidda",
+   "country": "SA",
+   "match": [
+    "jeddah"
+   ],
+   "iata": "JED"
+  },
+  "jerusalem": {
+   "en": "Jerusalem",
+   "ru": "Иерусалим",
+   "sk": "Jeruzalem",
+   "country": "IL",
+   "match": [
+    "jerusalem"
+   ],
+   "iata": "TLV"
+  },
+  "jesolo": {
+   "en": "Jesolo",
+   "ru": "Езоло",
+   "sk": "Jesolo",
+   "country": "IT",
+   "match": [
+    "jesolo"
+   ]
+  },
+  "kayseri": {
+   "en": "Kayseri",
+   "ru": "Кайсери",
+   "sk": "Kayseri",
+   "country": "TR",
+   "match": [
+    "kayseri"
+   ],
+   "iata": "ASR"
+  },
+  "keflavik": {
+   "en": "Keflavík",
+   "ru": "Кеблавик",
+   "sk": "Keflavík",
+   "country": "IS",
+   "match": [
+    "keflavik"
+   ],
+   "iata": "KEF"
+  },
+  "kemer": {
+   "en": "Kemer",
+   "ru": "Кемер",
+   "sk": "Kemer",
+   "country": "TR",
+   "match": [
+    "kemer"
+   ]
+  },
+  "kittila": {
+   "en": "Kittilä",
+   "ru": "Киттиля",
+   "sk": "Kittilä",
+   "country": "FI",
+   "match": [
+    "kittila"
+   ],
+   "iata": "KTT"
+  },
+  "klagenfurt_am_worthersee": {
+   "en": "Klagenfurt am Wörthersee",
+   "ru": "Клагенфурт-ам-Вёртерзе",
+   "sk": "Klagenfurt am Wörthersee",
+   "country": "AT",
+   "match": [
+    "klagenfurt_am_worthersee"
+   ],
+   "iata": "KLU"
+  },
+  "konyaalti": {
+   "en": "Konyaalti",
+   "ru": "Коньяалты",
+   "sk": "Konyaalti",
+   "country": "TR",
+   "match": [
+    "konyaalti"
+   ]
+  },
+  "kotor": {
+   "en": "Kotor",
+   "ru": "Котор",
+   "sk": "Kotor",
+   "country": "ME",
+   "match": [
+    "kotor"
+   ]
+  },
+  "krakow": {
+   "en": "Kraków",
+   "ru": "Краков",
+   "sk": "Krakov",
+   "country": "PL",
+   "match": [
+    "krakow"
+   ],
+   "iata": "KRK"
+  },
+  "kusadasi": {
+   "en": "Kusadasi",
+   "ru": "Кушадасы",
+   "sk": "Kusadasi",
+   "country": "TR",
+   "match": [
+    "kusadasi"
+   ]
+  },
+  "kutaisi": {
+   "en": "Kutaisi",
+   "ru": "Кутаиси",
+   "sk": "Kutaisi",
+   "country": "GE",
+   "match": [
+    "kutaisi"
+   ],
+   "iata": "KUT"
+  },
+  "kuwait": {
+   "en": "Kuwait",
+   "ru": "Кувейт",
+   "sk": "Kuvajt",
+   "country": "KW",
+   "match": [
+    "kuwait"
+   ],
+   "iata": "KWI"
+  },
+  "lagos": {
+   "en": "Lagos",
+   "ru": "Лагуш",
+   "sk": "Lagos",
+   "country": "PT",
+   "match": [
+    "lagos"
+   ]
+  },
+  "lamezia_terme": {
+   "en": "Lamezia Terme",
+   "ru": "Ламеция-Терме",
+   "sk": "Lamezia Terme",
+   "country": "IT",
+   "match": [
+    "lamezia_terme"
+   ],
+   "iata": "SUF"
+  },
+  "lara": {
+   "en": "Lara",
+   "ru": "Лара",
+   "sk": "Lara",
+   "country": "TR",
+   "match": [
+    "lara"
+   ]
+  },
+  "larnaca": {
+   "en": "Larnaca",
+   "ru": "Ларнака",
+   "sk": "Larnaka",
+   "country": "CY",
+   "match": [
+    "larnaca"
+   ],
+   "iata": "LCA"
+  },
+  "las_palmas_de_gran_canaria": {
+   "en": "Las Palmas de Gran Canaria",
+   "ru": "Лас-Пальмас",
+   "sk": "Las Palmas de Gran Canaria",
+   "country": "ES",
+   "match": [
+    "las_palmas_de_gran_canaria"
+   ],
+   "iata": "LPA"
+  },
+  "leeds": {
+   "en": "Leeds",
+   "ru": "Лидс",
+   "sk": "Leeds",
+   "country": "GB",
+   "match": [
+    "leeds"
+   ],
+   "iata": "LBA"
+  },
+  "leipzig": {
+   "en": "Leipzig",
+   "ru": "Лейпциг",
+   "sk": "Lipsko",
+   "country": "DE",
+   "match": [
+    "leipzig"
+   ],
+   "iata": "LEJ"
+  },
+  "lignano_sabbiadoro": {
+   "en": "Lignano Sabbiadoro",
+   "ru": "Линьяно-Саббьядоро",
+   "sk": "Lignano Sabbiadoro",
+   "country": "IT",
+   "match": [
+    "lignano_sabbiadoro"
+   ]
+  },
+  "lille": {
+   "en": "Lille",
+   "ru": "Лилль",
+   "sk": "Lille",
+   "country": "FR",
+   "match": [
+    "lille"
+   ],
+   "iata": "LIL"
+  },
+  "limassol": {
+   "en": "Limassol",
+   "ru": "Лимасол",
+   "sk": "Limassol",
+   "country": "CY",
+   "match": [
+    "limassol"
+   ]
+  },
+  "limerick": {
+   "en": "Limerick",
+   "ru": "Лимерик",
+   "sk": "Limerick",
+   "country": "IE",
+   "match": [
+    "limerick"
+   ],
+   "iata": "SNN"
+  },
+  "lisbon": {
+   "en": "Lisbon",
+   "ru": "Лиссабон",
+   "sk": "Lisabon",
+   "country": "PT",
+   "match": [
+    "lisbon"
+   ],
+   "iata": "LIS"
+  },
+  "liverpool": {
+   "en": "Liverpool",
+   "ru": "Ливерпуль",
+   "sk": "Liverpool",
+   "country": "GB",
+   "match": [
+    "liverpool"
+   ],
+   "iata": "LPL"
+  },
+  "lloret_de_mar": {
+   "en": "Lloret de Mar",
+   "ru": "Льорет-де-Мар",
+   "sk": "Lloret de Mar",
+   "country": "ES",
+   "match": [
+    "lloret_de_mar"
+   ]
+  },
+  "london": {
+   "en": "London",
+   "ru": "Лондон",
+   "sk": "Londýn",
+   "country": "GB",
+   "match": [
+    "london"
+   ],
+   "iata": "LTN"
+  },
+  "los_angeles": {
+   "en": "Los Angeles",
+   "ru": "Лос-Анджелес",
+   "sk": "Los Angeles",
+   "country": "US",
+   "match": [
+    "los_angeles"
+   ],
+   "iata": "LAX"
+  },
+  "luxembourg": {
+   "en": "Luxembourg",
+   "ru": "Люксембург",
+   "sk": "Luxemburg",
+   "country": "LU",
+   "match": [
+    "luxembourg"
+   ],
+   "iata": "LUX"
+  },
+  "lyon": {
+   "en": "Lyon",
+   "ru": "Лион",
+   "sk": "Lyon",
+   "country": "FR",
+   "match": [
+    "lyon"
+   ],
+   "iata": "LYS"
+  },
+  "maastricht": {
+   "en": "Maastricht",
+   "ru": "Маастрихт",
+   "sk": "Maastricht",
+   "country": "NL",
+   "match": [
+    "maastricht"
+   ],
+   "iata": "MST"
+  },
+  "madrid": {
+   "en": "Madrid",
+   "ru": "Мадрид",
+   "sk": "Madrid",
+   "country": "ES",
+   "match": [
+    "madrid"
+   ],
+   "iata": "MAD"
+  },
+  "makadi_bay": {
+   "en": "Makadi Bay",
+   "ru": "Макади-Бей",
+   "sk": "Makadi Bay",
+   "country": "EG",
+   "match": [
+    "makadi_bay"
+   ]
+  },
+  "makarska": {
+   "en": "Makarska",
+   "ru": "Макарска",
+   "sk": "Makarska",
+   "country": "HR",
+   "match": [
+    "makarska"
+   ]
+  },
+  "malaga": {
+   "en": "Málaga",
+   "ru": "Малага",
+   "sk": "Málaga",
+   "country": "ES",
+   "match": [
+    "malaga"
+   ],
+   "iata": "AGP"
+  },
+  "male": {
+   "en": "Malé",
+   "ru": "Мале",
+   "sk": "Male",
+   "country": "MV",
+   "match": [
+    "male"
+   ],
+   "iata": "MLE"
+  },
+  "malia": {
+   "en": "Malia",
+   "ru": "Малия",
+   "sk": "Malia",
+   "country": "GR",
+   "match": [
+    "malia"
+   ]
+  },
+  "malta": {
+   "en": "Malta",
+   "ru": "Мальта",
+   "sk": "Malta",
+   "country": "MT",
+   "match": [
+    "malta"
+   ],
+   "iata": "MLA"
+  },
+  "manchester": {
+   "en": "Manchester",
+   "ru": "Манчестер",
+   "sk": "Manchester",
+   "country": "GB",
+   "match": [
+    "manchester"
+   ],
+   "iata": "MAN"
+  },
+  "marbella": {
+   "en": "Marbella",
+   "ru": "Марбелья",
+   "sk": "Marbella",
+   "country": "ES",
+   "match": [
+    "marbella"
+   ]
+  },
+  "marmaris": {
+   "en": "Marmaris",
+   "ru": "Мармарис",
+   "sk": "Marmaris",
+   "country": "TR",
+   "match": [
+    "marmaris"
+   ]
+  },
+  "marrakech": {
+   "en": "Marrakech",
+   "ru": "Марракеш",
+   "sk": "Murrákuš",
+   "country": "MA",
+   "match": [
+    "marrakech"
+   ],
+   "iata": "RAK"
+  },
+  "marsa_alam": {
+   "en": "Marsa Alam",
+   "ru": "Марса-Алам",
+   "sk": "Marsa Alam",
+   "country": "EG",
+   "match": [
+    "marsa_alam"
+   ],
+   "iata": "RMF"
+  },
+  "marseille": {
+   "en": "Marseille",
+   "ru": "Марсель",
+   "sk": "Marseille",
+   "country": "FR",
+   "match": [
+    "marseille"
+   ],
+   "iata": "MRS"
+  },
+  "maspalomas": {
+   "en": "Maspalomas",
+   "ru": "Маспаломас",
+   "sk": "Maspalomas",
+   "country": "ES",
+   "match": [
+    "maspalomas"
+   ]
+  },
+  "memmingen": {
+   "en": "Memmingen",
+   "ru": "Мемминген",
+   "sk": "Memmingen",
+   "country": "DE",
+   "match": [
+    "memmingen"
+   ],
+   "iata": "FMM"
+  },
+  "milan": {
+   "en": "Milan",
+   "ru": "Милан",
+   "sk": "Miláno",
+   "country": "IT",
+   "match": [
+    "milan"
+   ],
+   "iata": "MXP"
+  },
+  "monastir": {
+   "en": "Monastir",
+   "ru": "Монастир",
+   "sk": "Monastir",
+   "country": "TN",
+   "match": [
+    "monastir"
+   ]
+  },
+  "montreal": {
+   "en": "Montreal",
+   "ru": "Монреаль",
+   "sk": "Montreal",
+   "country": "CA",
+   "match": [
+    "montreal"
+   ],
+   "iata": "YUL"
+  },
+  "mugla": {
+   "en": "Muğla",
+   "ru": "Мугла",
+   "sk": "Muğla",
+   "country": "TR",
+   "match": [
+    "mugla"
+   ],
+   "iata": "DLM"
+  },
+  "munich": {
+   "en": "Munich",
+   "ru": "Мюнхен",
+   "sk": "Mníchov",
+   "country": "DE",
+   "match": [
+    "munich"
+   ],
+   "iata": "MUC"
+  },
+  "muscat": {
+   "en": "Muscat",
+   "ru": "Маскат",
+   "sk": "Maskat",
+   "country": "OM",
+   "match": [
+    "muscat"
+   ],
+   "iata": "MCT"
+  },
+  "naama_bay": {
+   "en": "Naama Bay",
+   "ru": "Наама-Бей",
+   "sk": "Naama Bay",
+   "country": "EG",
+   "match": [
+    "naama_bay"
+   ]
+  },
+  "nabq": {
+   "en": "Nabq",
+   "ru": "Набк",
+   "sk": "Nabq",
+   "country": "EG",
+   "match": [
+    "nabq"
+   ]
+  },
+  "nantes": {
+   "en": "Nantes",
+   "ru": "Нант",
+   "sk": "Nantes",
+   "country": "FR",
+   "match": [
+    "nantes"
+   ],
+   "iata": "NTE"
+  },
+  "naples": {
+   "en": "Naples",
+   "ru": "Неаполь",
+   "sk": "Neapol",
+   "country": "IT",
+   "match": [
+    "naples"
+   ],
+   "iata": "NAP"
+  },
+  "nessebar": {
+   "en": "Nessebar",
+   "ru": "Несебр",
+   "sk": "Nesebar",
+   "country": "BG",
+   "match": [
+    "nesebar",
+    "nessebar"
+   ]
+  },
+  "new_york_city": {
+   "en": "New York City",
+   "ru": "Нью-Йорк",
+   "sk": "New York",
+   "country": "US",
+   "match": [
+    "new_york_city"
+   ],
+   "iata": "JFK"
+  },
+  "nice": {
+   "en": "Nice",
+   "ru": "Ницца",
+   "sk": "Nice",
+   "country": "FR",
+   "match": [
+    "nice"
+   ],
+   "iata": "NCE"
+  },
+  "ningbo": {
+   "en": "Ningbo",
+   "ru": "Нинбо",
+   "sk": "Ningbo",
+   "country": "CN",
+   "match": [
+    "ningbo"
+   ],
+   "iata": "NGB"
+  },
+  "nis": {
+   "en": "Niš",
+   "ru": "Ниш",
+   "sk": "Niš",
+   "country": "RS",
+   "match": [
+    "nis"
+   ],
+   "iata": "INI"
+  },
+  "nottingham": {
+   "en": "Nottingham",
+   "ru": "Ноттингем",
+   "sk": "Nottingham",
+   "country": "GB",
+   "match": [
+    "nottingham"
+   ],
+   "iata": "EMA"
+  },
+  "nuremberg": {
+   "en": "Nuremberg",
+   "ru": "Нюрнберг",
+   "sk": "Norimberg",
+   "country": "DE",
+   "match": [
+    "nuremberg"
+   ],
+   "iata": "NUE"
+  },
+  "ohrid": {
+   "en": "Ohrid",
+   "ru": "Охрид",
+   "sk": "Ohrid",
+   "country": "MK",
+   "match": [
+    "ohrid"
+   ]
+  },
+  "olbia": {
+   "en": "Olbia",
+   "ru": "Ольбия",
+   "sk": "Olbia",
+   "country": "IT",
+   "match": [
+    "olbia"
+   ],
+   "iata": "OLB"
+  },
+  "oludeniz": {
+   "en": "Oludeniz",
+   "ru": "Олюдениз",
+   "sk": "Oludeniz",
+   "country": "TR",
+   "match": [
+    "oludeniz"
+   ]
+  },
+  "palermo": {
+   "en": "Palermo",
+   "ru": "Палермо",
+   "sk": "Palermo",
+   "country": "IT",
+   "match": [
+    "palermo"
+   ],
+   "iata": "PMO"
+  },
+  "palma": {
+   "en": "Palma",
+   "ru": "Пальма",
+   "sk": "Palma de Mallorca",
+   "country": "ES",
+   "match": [
+    "palma"
+   ],
+   "iata": "PMI"
+  },
+  "paphos": {
+   "en": "Paphos",
+   "ru": "Пафос",
+   "sk": "Pafos",
+   "country": "CY",
+   "match": [
+    "paphos"
+   ],
+   "iata": "PFO"
+  },
+  "paris": {
+   "en": "Paris",
+   "ru": "Париж",
+   "sk": "Paríž",
+   "country": "FR",
+   "match": [
+    "paris"
+   ],
+   "iata": "ORY"
+  },
+  "pescara": {
+   "en": "Pescara",
+   "ru": "Пескара",
+   "sk": "Pescara",
+   "country": "IT",
+   "match": [
+    "pescara"
+   ],
+   "iata": "PSR"
+  },
+  "pisa": {
+   "en": "Pisa",
+   "ru": "Пиза",
+   "sk": "Pisa",
+   "country": "IT",
+   "match": [
+    "pisa"
+   ],
+   "iata": "PSA"
+  },
+  "plaine_magnien": {
+   "en": "Plaine Magnien",
+   "ru": "Plaine Magnien",
+   "sk": "Plaine Magnien",
+   "country": "MU",
+   "match": [
+    "plaine_magnien"
+   ],
+   "iata": "MRU"
+  },
+  "playa_de_las_americas": {
+   "en": "Playa de las Americas",
+   "ru": "Плайя-де-лас-Америкас",
+   "sk": "Playa de las Américas",
+   "country": "ES",
+   "match": [
+    "playa_de_las_americas"
+   ]
+  },
+  "podgorica": {
+   "en": "Podgorica",
+   "ru": "Подгорица",
+   "sk": "Podgorica",
+   "country": "ME",
+   "match": [
+    "podgorica"
+   ],
+   "iata": "TGD"
+  },
+  "ponta_delgada": {
+   "en": "Ponta Delgada",
+   "ru": "Понта-Делгада",
+   "sk": "Ponta Delgada",
+   "country": "PT",
+   "match": [
+    "ponta_delgada"
+   ],
+   "iata": "PDL"
+  },
+  "porec": {
+   "en": "Porec",
+   "ru": "Пореч",
+   "sk": "Poreč",
+   "country": "HR",
+   "match": [
+    "porec"
+   ]
+  },
+  "portimao": {
+   "en": "Portimao",
+   "ru": "Портиман",
+   "sk": "Portimão",
+   "country": "PT",
+   "match": [
+    "portimao"
+   ]
+  },
+  "porto": {
+   "en": "Porto",
+   "ru": "Порту",
+   "sk": "Porto",
+   "country": "PT",
+   "match": [
+    "porto"
+   ],
+   "iata": "OPO"
+  },
+  "positano": {
+   "en": "Positano",
+   "ru": "Позитано",
+   "sk": "Positano",
+   "country": "IT",
+   "match": [
+    "positano"
+   ]
+  },
+  "poznan": {
+   "en": "Poznań",
+   "ru": "Познань",
+   "sk": "Poznaň",
+   "country": "PL",
+   "match": [
+    "poznan"
+   ],
+   "iata": "POZ"
+  },
+  "prague": {
+   "en": "Prague",
+   "ru": "Прага",
+   "sk": "Praha",
+   "country": "CZ",
+   "match": [
+    "prague"
+   ],
+   "iata": "PRG"
+  },
+  "pristina": {
+   "en": "Pristina",
+   "ru": "Приштина",
+   "sk": "Priština",
+   "country": "XK",
+   "match": [
+    "pristina"
+   ],
+   "iata": "PRN"
+  },
+  "protaras": {
+   "en": "Protaras",
+   "ru": "Протарас",
+   "sk": "Protaras",
+   "country": "CY",
+   "match": [
+    "protaras"
+   ]
+  },
+  "puerto_del_carmen": {
+   "en": "Puerto del Carmen",
+   "ru": "Пуэрто-дель-Кармен",
+   "sk": "Puerto del Carmen",
+   "country": "ES",
+   "match": [
+    "puerto_del_carmen"
+   ]
+  },
+  "pula": {
+   "en": "Pula",
+   "ru": "Пула",
+   "sk": "Pula",
+   "country": "HR",
+   "match": [
+    "pula"
+   ]
+  },
+  "punta_cana": {
+   "en": "Punta Cana",
+   "ru": "Пунта-Кана",
+   "sk": "Punta Cana",
+   "country": "DO",
+   "match": [
+    "punta_cana"
+   ],
+   "iata": "PUJ"
+  },
+  "rethymno": {
+   "en": "Rethymno",
+   "ru": "Ретимно",
+   "sk": "Rethymno",
+   "country": "GR",
+   "match": [
+    "rethymno"
+   ]
+  },
+  "rhodes": {
+   "en": "Rhodes",
+   "ru": "Родос",
+   "sk": "Rodos",
+   "country": "GR",
+   "match": [
+    "rhodes"
+   ],
+   "iata": "RHO"
+  },
+  "riccione": {
+   "en": "Riccione",
+   "ru": "Риччоне",
+   "sk": "Riccione",
+   "country": "IT",
+   "match": [
+    "riccione"
+   ]
+  },
+  "riga": {
+   "en": "Riga",
+   "ru": "Рига",
+   "sk": "Riga",
+   "country": "LV",
+   "match": [
+    "riga"
+   ],
+   "iata": "RIX"
+  },
+  "rimini": {
+   "en": "Rimini",
+   "ru": "Римини",
+   "sk": "Rimini",
+   "country": "IT",
+   "match": [
+    "rimini"
+   ],
+   "iata": "RMI"
+  },
+  "riyadh": {
+   "en": "Riyadh",
+   "ru": "Эр-Рияд",
+   "sk": "Rijád",
+   "country": "SA",
+   "match": [
+    "riyadh"
+   ],
+   "iata": "RUH"
+  },
+  "rome": {
+   "en": "Rome",
+   "ru": "Рим",
+   "sk": "Rím",
+   "country": "IT",
+   "match": [
+    "rome"
+   ],
+   "iata": "CIA"
+  },
+  "rovaniemi": {
+   "en": "Rovaniemi",
+   "ru": "Рованиеми",
+   "sk": "Rovaniemi",
+   "country": "FI",
+   "match": [
+    "rovaniemi"
+   ],
+   "iata": "RVN"
+  },
+  "rovinj": {
+   "en": "Rovinj",
+   "ru": "Ровинь",
+   "sk": "Rovinj",
+   "country": "HR",
+   "match": [
+    "rovinj"
+   ]
+  },
+  "safaga": {
+   "en": "Safaga",
+   "ru": "Сафага",
+   "sk": "Safaga",
+   "country": "EG",
+   "match": [
+    "safaga"
+   ]
+  },
+  "sahl_hasheesh": {
+   "en": "Sahl Hasheesh",
+   "ru": "Сахль-Хашиш",
+   "sk": "Sahl Hasheesh",
+   "country": "EG",
+   "match": [
+    "sahl_hasheesh"
+   ]
+  },
+  "salou": {
+   "en": "Salou",
+   "ru": "Салоу",
+   "sk": "Salou",
+   "country": "ES",
+   "match": [
+    "salou"
+   ]
+  },
+  "santa_cruz_de_tenerife": {
+   "en": "Santa Cruz de Tenerife",
+   "ru": "Санта-Крус-де-Тенерифе",
+   "sk": "Santa Cruz de Tenerife",
+   "country": "ES",
+   "match": [
+    "santa_cruz_de_tenerife"
+   ],
+   "iata": "TFS"
+  },
+  "sanya": {
+   "en": "Sanya",
+   "ru": "Санья",
+   "sk": "Sanya",
+   "country": "CN",
+   "match": [
+    "sanya"
+   ],
+   "iata": "SYX"
+  },
+  "sarajevo": {
+   "en": "Sarajevo",
+   "ru": "Сараево",
+   "sk": "Sarajevo",
+   "country": "BA",
+   "match": [
+    "sarajevo"
+   ],
+   "iata": "SJJ"
+  },
+  "saranda": {
+   "en": "Saranda",
+   "ru": "Саранда",
+   "sk": "Saranda",
+   "country": "AL",
+   "match": [
+    "saranda"
+   ]
+  },
+  "seoul": {
+   "en": "Seoul",
+   "ru": "Сеул",
+   "sk": "Soul",
+   "country": "KR",
+   "match": [
+    "seoul"
+   ],
+   "iata": "ICN"
+  },
+  "seville": {
+   "en": "Seville",
+   "ru": "Севилья",
+   "sk": "Sevilla",
+   "country": "ES",
+   "match": [
+    "seville"
+   ],
+   "iata": "SVQ"
+  },
+  "shanghai": {
+   "en": "Shanghai",
+   "ru": "Шанхай",
+   "sk": "Šanghaj",
+   "country": "CN",
+   "match": [
+    "shanghai"
+   ],
+   "iata": "PVG"
+  },
+  "sharjah": {
+   "en": "Sharjah",
+   "ru": "Шарджа",
+   "sk": "Sharjah",
+   "country": "AE",
+   "match": [
+    "sharjah"
+   ],
+   "iata": "SHJ"
+  },
+  "sharm_el_sheikh": {
+   "en": "Sharm el-Sheikh",
+   "ru": "Шарм-эш-Шейх",
+   "sk": "Šarm aš-Šajch",
+   "country": "EG",
+   "match": [
+    "sharm_el_sheikh"
+   ],
+   "iata": "SSH"
+  },
+  "shenzhen": {
+   "en": "Shenzhen",
+   "ru": "Шэньчжэнь",
+   "sk": "Šen-čen",
+   "country": "CN",
+   "match": [
+    "shenzhen"
+   ],
+   "iata": "SZX"
+  },
+  "shymkent": {
+   "en": "Shymkent",
+   "ru": "Шымкент",
+   "sk": "Shymkent",
+   "country": "KZ",
+   "match": [
+    "shymkent"
+   ],
+   "iata": "CIT"
+  },
+  "sibiu": {
+   "en": "Sibiu",
+   "ru": "Сибиу",
+   "sk": "Sibiu",
+   "country": "RO",
+   "match": [
+    "sibiu"
+   ],
+   "iata": "SBZ"
+  },
+  "side": {
+   "en": "Side",
+   "ru": "Сиде",
+   "sk": "Side",
+   "country": "TR",
+   "match": [
+    "side"
+   ]
+  },
+  "singapore": {
+   "en": "Singapore",
+   "ru": "Сингапур",
+   "sk": "Singapur",
+   "country": "SG",
+   "match": [
+    "singapore"
+   ],
+   "iata": "SIN"
+  },
+  "skopje": {
+   "en": "Skopje",
+   "ru": "Скопье",
+   "sk": "Skopje",
+   "country": "MK",
+   "match": [
+    "skopje"
+   ],
+   "iata": "SKP"
+  },
+  "sliema": {
+   "en": "Sliema",
+   "ru": "Слима",
+   "sk": "Sliema",
+   "country": "MT",
+   "match": [
+    "sliema"
+   ]
+  },
+  "sofia": {
+   "en": "Sofia",
+   "ru": "София",
+   "sk": "Sofia",
+   "country": "BG",
+   "match": [
+    "sofia"
+   ],
+   "iata": "SOF"
+  },
+  "soma_bay": {
+   "en": "Soma Bay",
+   "ru": "Сома-Бей",
+   "sk": "Soma Bay",
+   "country": "EG",
+   "match": [
+    "soma_bay"
+   ]
+  },
+  "sorrento": {
+   "en": "Sorrento",
+   "ru": "Сорренто",
+   "sk": "Sorrento",
+   "country": "IT",
+   "match": [
+    "sorrento"
+   ]
+  },
+  "sousse": {
+   "en": "Sousse",
+   "ru": "Сусс",
+   "sk": "Sousse",
+   "country": "TN",
+   "match": [
+    "sousse"
+   ]
+  },
+  "sozopol": {
+   "en": "Sozopol",
+   "ru": "Созополь",
+   "sk": "Sozopol",
+   "country": "BG",
+   "match": [
+    "sozopol"
+   ]
+  },
+  "split": {
+   "en": "Split",
+   "ru": "Сплит",
+   "sk": "Split",
+   "country": "HR",
+   "match": [
+    "split"
+   ],
+   "iata": "SPU"
+  },
+  "st_gallen": {
+   "en": "St. Gallen",
+   "ru": "Санкт-Галлен",
+   "sk": "St. Gallen",
+   "country": "CH",
+   "match": [
+    "st_gallen"
+   ],
+   "iata": "ACH"
+  },
+  "st_julian_s": {
+   "en": "St Julian's",
+   "ru": "Сент-Джулианс",
+   "sk": "St. Julian's",
+   "country": "MT",
+   "match": [
+    "st_julian_s"
+   ]
+  },
+  "stockholm": {
+   "en": "Stockholm",
+   "ru": "Стокгольм",
+   "sk": "Štokholm",
+   "country": "SE",
+   "match": [
+    "stockholm"
+   ],
+   "iata": "ARN"
+  },
+  "stuttgart": {
+   "en": "Stuttgart",
+   "ru": "Штутгарт",
+   "sk": "Stuttgart",
+   "country": "DE",
+   "match": [
+    "stuttgart"
+   ],
+   "iata": "STR"
+  },
+  "suceava": {
+   "en": "Suceava",
+   "ru": "Сучава",
+   "sk": "Suceava",
+   "country": "RO",
+   "match": [
+    "suceava"
+   ],
+   "iata": "SCV"
+  },
+  "sunny_beach": {
+   "en": "Sunny Beach",
+   "ru": "Солнечный Берег",
+   "sk": "Slnečné pobrežie",
+   "country": "BG",
+   "match": [
+    "slnecne_pobrezie",
+    "sunny_beach"
+   ]
+  },
+  "taipei": {
+   "en": "Taipei",
+   "ru": "Taipei",
+   "sk": "Taipei",
+   "country": "TW",
+   "match": [
+    "taipei"
+   ],
+   "iata": "TPE"
+  },
+  "tallinn": {
+   "en": "Tallinn",
+   "ru": "Таллин",
+   "sk": "Tallinn",
+   "country": "EE",
+   "match": [
+    "tallinn"
+   ],
+   "iata": "TLL"
+  },
+  "taormina": {
+   "en": "Taormina",
+   "ru": "Таормина",
+   "sk": "Taormina",
+   "country": "IT",
+   "match": [
+    "taormina"
+   ]
+  },
+  "targu_mures": {
+   "en": "Târgu Mureș",
+   "ru": "Тыргу-Муреш",
+   "sk": "Târgu Mureș",
+   "country": "RO",
+   "match": [
+    "targu_mures"
+   ],
+   "iata": "TGM"
+  },
+  "tbilisi": {
+   "en": "Tbilisi",
+   "ru": "Тбилиси",
+   "sk": "Tbilisi",
+   "country": "GE",
+   "match": [
+    "tbilisi"
+   ],
+   "iata": "TBS"
+  },
+  "tehran": {
+   "en": "Tehran",
+   "ru": "Тегеран",
+   "sk": "Teherán",
+   "country": "IR",
+   "match": [
+    "tehran"
+   ],
+   "iata": "IKA"
+  },
+  "thessaloniki": {
+   "en": "Thessaloniki",
+   "ru": "Салоники",
+   "sk": "Solún",
+   "country": "GR",
+   "match": [
+    "thessaloniki"
+   ],
+   "iata": "SKG"
+  },
+  "tirana": {
+   "en": "Tirana",
+   "ru": "Тирана",
+   "sk": "Tirana",
+   "country": "AL",
+   "match": [
+    "tirana"
+   ],
+   "iata": "TIA"
+  },
+  "tokyo": {
+   "en": "Tokyo",
+   "ru": "Токио",
+   "sk": "Tokio",
+   "country": "JP",
+   "match": [
+    "tokyo"
+   ],
+   "iata": "HND"
+  },
+  "toronto": {
+   "en": "Toronto",
+   "ru": "Торонто",
+   "sk": "Toronto",
+   "country": "CA",
+   "match": [
+    "toronto"
+   ],
+   "iata": "YYZ"
+  },
+  "torremolinos": {
+   "en": "Torremolinos",
+   "ru": "Торремолинос",
+   "sk": "Torremolinos",
+   "country": "ES",
+   "match": [
+    "torremolinos"
+   ]
+  },
+  "toulouse": {
+   "en": "Toulouse",
+   "ru": "Тулуза",
+   "sk": "Toulouse",
+   "country": "FR",
+   "match": [
+    "toulouse"
+   ],
+   "iata": "TLS"
+  },
+  "trapani": {
+   "en": "Trapani",
+   "ru": "Трапани",
+   "sk": "Trapani",
+   "country": "IT",
+   "match": [
+    "trapani"
+   ],
+   "iata": "TPS"
+  },
+  "trieste": {
+   "en": "Trieste",
+   "ru": "Триест",
+   "sk": "Terst",
+   "country": "IT",
+   "match": [
+    "trieste"
+   ],
+   "iata": "TRS"
+  },
+  "troms_municipality": {
+   "en": "Tromsø Municipality",
+   "ru": "Тромсё",
+   "sk": "Tromsø",
+   "country": "NO",
+   "match": [
+    "troms_municipality"
+   ],
+   "iata": "TOS"
+  },
+  "tunis": {
+   "en": "Tunis",
+   "ru": "Тунис",
+   "sk": "Tunis",
+   "country": "TN",
+   "match": [
+    "tunis"
+   ],
+   "iata": "TUN"
+  },
+  "turin": {
+   "en": "Turin",
+   "ru": "Турин",
+   "sk": "Turín",
+   "country": "IT",
+   "match": [
+    "turin"
+   ],
+   "iata": "TRN"
+  },
+  "tuzla": {
+   "en": "Tuzla",
+   "ru": "Тузла",
+   "sk": "Tuzla",
+   "country": "BA",
+   "match": [
+    "tuzla"
+   ],
+   "iata": "TZL"
+  },
+  "tyne_and_wear": {
+   "en": "Tyne and Wear",
+   "ru": "Тайн-энд-Уир",
+   "sk": "Tyne and Wear",
+   "country": "GB",
+   "match": [
+    "tyne_and_wear"
+   ],
+   "iata": "NCL"
+  },
+  "valencia": {
+   "en": "Valencia",
+   "ru": "Валенсия",
+   "sk": "Valencia",
+   "country": "ES",
+   "match": [
+    "valencia"
+   ],
+   "iata": "VLC"
+  },
+  "varna": {
+   "en": "Varna",
+   "ru": "Варна",
+   "sk": "Varna",
+   "country": "BG",
+   "match": [
+    "varna"
+   ],
+   "iata": "VAR"
+  },
+  "venice": {
+   "en": "Venice",
+   "ru": "Венеция",
+   "sk": "Benátky",
+   "country": "IT",
+   "match": [
+    "venice"
+   ],
+   "iata": "TSF"
+  },
+  "verona": {
+   "en": "Verona",
+   "ru": "Верона",
+   "sk": "Verona",
+   "country": "IT",
+   "match": [
+    "verona"
+   ],
+   "iata": "VRN"
+  },
+  "vienna": {
+   "en": "Vienna",
+   "ru": "Вена",
+   "sk": "Viedeň",
+   "country": "AT",
+   "match": [
+    "vienna"
+   ],
+   "iata": "VIE"
+  },
+  "vila_baleira": {
+   "en": "Vila Baleira",
+   "ru": "Вила-Балейра",
+   "sk": "Vila Baleira",
+   "country": "PT",
+   "match": [
+    "vila_baleira"
+   ],
+   "iata": "PXO"
+  },
+  "vilnius": {
+   "en": "Vilnius",
+   "ru": "Вильнюс",
+   "sk": "Vilnius",
+   "country": "LT",
+   "match": [
+    "vilnius"
+   ],
+   "iata": "VNO"
+  },
+  "vlore": {
+   "en": "Vlore",
+   "ru": "Влёра",
+   "sk": "Vlora",
+   "country": "AL",
+   "match": [
+    "vlora",
+    "vlore"
+   ]
+  },
+  "warsaw": {
+   "en": "Warsaw",
+   "ru": "Варшава",
+   "sk": "Varšava",
+   "country": "PL",
+   "match": [
+    "warsaw"
+   ],
+   "iata": "WAW"
+  },
+  "washington_d_c": {
+   "en": "Washington, D.C.",
+   "ru": "Вашингтон",
+   "sk": "Washington D.C.",
+   "country": "US",
+   "match": [
+    "washington_d_c"
+   ],
+   "iata": "IAD"
+  },
+  "wrocaw": {
+   "en": "Wrocław",
+   "ru": "Вроцлав",
+   "sk": "Vroclav",
+   "country": "PL",
+   "match": [
+    "wrocaw"
+   ],
+   "iata": "WRO"
+  },
+  "xi_an": {
+   "en": "Xi'an",
+   "ru": "Сиань",
+   "sk": "Si-an",
+   "country": "CN",
+   "match": [
+    "xi_an"
+   ],
+   "iata": "XIY"
+  },
+  "yerevan": {
+   "en": "Yerevan",
+   "ru": "Ереван",
+   "sk": "Jerevan",
+   "country": "AM",
+   "match": [
+    "yerevan"
+   ],
+   "iata": "EVN"
+  },
+  "zadar": {
+   "en": "Zadar",
+   "ru": "Задар",
+   "sk": "Zadar",
+   "country": "HR",
+   "match": [
+    "zadar"
+   ],
+   "iata": "ZAD"
+  },
+  "zagreb": {
+   "en": "Zagreb",
+   "ru": "Загреб",
+   "sk": "Záhreb",
+   "country": "HR",
+   "match": [
+    "zagreb"
+   ],
+   "iata": "ZAG"
+  },
+  "zurich": {
+   "en": "Zurich",
+   "ru": "Цюрих",
+   "sk": "Zürich",
+   "country": "CH",
+   "match": [
+    "zurich"
+   ],
+   "iata": "ZRH"
+  }
+ }
 }
