@@ -1,8 +1,12 @@
 name: Website
 
-# Publishes web/ on GitHub Pages. Run by hand only, on the owner's decision.
+# Publishes web/ on GitHub Pages: on every change to web/ in develop, or by
+# hand from the Actions tab.
 
 on:
+  push:
+    branches: [develop]
+    paths: ['web/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
