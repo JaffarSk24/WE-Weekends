@@ -333,9 +333,11 @@ class Engine:
                 text = dg.item_text(lang, c, name, adults, len(ages), new=f"{c.mode}:{c.it.key}" not in sent_before)
                 if i == 0:
                     text = f"<b>━ {dg.e(title)}</b>\n\n{text}"
-                ids = {"city": secrets.token_hex(6), "times": secrets.token_hex(6)}
-                self.store.button(ids["city"], chat_id, f"city:{c.it.dest}")
-                self.store.button(ids["times"], chat_id, f"slots:{c.out_slot}:{c.ret_slot}")
+                aspects = {"country": f"country:{c.it.country}", "city": f"city:{c.it.dest}",
+                           "out": f"out:{c.out_slot}", "back": f"back:{c.ret_slot}"}
+                ids = {key: secrets.token_hex(6) for key in aspects}
+                for key, aspect in aspects.items():
+                    self.store.button(ids[key], chat_id, aspect)
                 if c.hotel_name:
                     ids["stay"] = secrets.token_hex(6)
                     self.store.button(ids["stay"], chat_id, f"hotel:{c.hotel_name}")

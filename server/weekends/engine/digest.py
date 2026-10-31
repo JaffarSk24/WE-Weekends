@@ -41,7 +41,7 @@ TX = {
         "school": "учебных дней пропускает ребёнок: {n}",
         "slots": {"morning": "вылет рано утром", "evening_before": "вылет вечером после работы", "midday": "вылет днём", "day_lost": "вылет поздно, день уходит на дорогу",
                   "before_work": "прилёт утром прямо к работе", "evening": "обратно вечером", "afternoon": "обратно днём", "ret_day_lost": "обратно утром, последний день уходит на дорогу"},
-        "btn_city": "👎 город", "btn_stay": "👎 жильё", "btn_times": "👎 время рейсов", "btn_up": "👍 нравится",
+        "btn_country": "👎 страна", "btn_city": "👎 город", "btn_stay": "👎 жильё", "btn_out": "👎 рейс туда", "btn_back": "👎 рейс обратно", "btn_up": "👍 нравится",
         "vac_option": "{a} - {b}, {who}", "vac_hotels": "Ваши отели на эти даты:", "vac_no_flights": "прямых рейсов на эти даты пока нет",
         "tickets": "билеты",
         "footer": "Это только рекомендации: бронируете вы сами, цены могут измениться. Настройки: {url}",
@@ -74,7 +74,7 @@ TX = {
         "school": "vynechané školské dni: {n}",
         "slots": {"morning": "odlet skoro ráno", "evening_before": "odlet večer po práci", "midday": "odlet cez deň", "day_lost": "odlet neskoro, deň padne na cestu",
                   "before_work": "prílet ráno rovno do práce", "evening": "späť večer", "afternoon": "späť cez deň", "ret_day_lost": "späť ráno, posledný deň padne na cestu"},
-        "btn_city": "👎 mesto", "btn_stay": "👎 ubytovanie", "btn_times": "👎 časy letov", "btn_up": "👍 páči sa",
+        "btn_country": "👎 krajina", "btn_city": "👎 mesto", "btn_stay": "👎 ubytovanie", "btn_out": "👎 let tam", "btn_back": "👎 let späť", "btn_up": "👍 páči sa",
         "vac_option": "{a} - {b}, {who}", "vac_hotels": "Vaše hotely v tieto dni:", "vac_no_flights": "priame lety v tieto dni zatiaľ nie sú",
         "tickets": "letenky",
         "footer": "Sú to len odporúčania: rezervujete si sami, ceny sa môžu zmeniť. Nastavenia: {url}",
@@ -107,7 +107,7 @@ TX = {
         "school": "school days missed: {n}",
         "slots": {"morning": "early morning departure", "evening_before": "leaves in the evening after work", "midday": "daytime departure", "day_lost": "late departure, the day goes on travel",
                   "before_work": "lands in the morning, straight to work", "evening": "back in the evening", "afternoon": "back in the afternoon", "ret_day_lost": "back in the morning, the last day goes on travel"},
-        "btn_city": "👎 city", "btn_stay": "👎 stay", "btn_times": "👎 flight times", "btn_up": "👍 like",
+        "btn_country": "👎 country", "btn_city": "👎 city", "btn_stay": "👎 stay", "btn_out": "👎 outbound", "btn_back": "👎 return flight", "btn_up": "👍 like",
         "vac_option": "{a} - {b}, {who}", "vac_hotels": "Your hotels on these dates:", "vac_no_flights": "no direct flights on these dates yet",
         "tickets": "tickets",
         "footer": "Recommendations only: you book yourself, prices may change. Settings: {url}",
@@ -215,10 +215,11 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
 
 
 def buttons(lang: str, ids: dict[str, str], mode: str) -> list[list[dict]]:
-    """ids maps an aspect (city, stay, times, up) to its stored button id."""
+    """ids maps an aspect (country, city, stay, out, back) to its stored
+    button id. Outbound and return flights are separate signals."""
     t = TX[lang]
-    row1 = [{"text": t["btn_city"], "callback_data": f"r:{ids['city']}:-1"}]
+    down = lambda key: {"text": t[f"btn_{key}"], "callback_data": f"r:{ids[key]}:-1"}  # noqa: E731
+    row1 = [down("country"), down("city")]
     if mode != "diamond" and "stay" in ids:
-        row1.append({"text": t["btn_stay"], "callback_data": f"r:{ids['stay']}:-1"})
-    row1.append({"text": t["btn_times"], "callback_data": f"r:{ids['times']}:-1"})
-    return [row1, [{"text": t["btn_up"], "callback_data": f"r:{ids['city']}:1"}]]
+        row1.append(down("stay"))
+    return [row1, [down("out"), down("back")], [{"text": t["btn_up"], "callback_data": f"r:{ids['city']}:1"}]]

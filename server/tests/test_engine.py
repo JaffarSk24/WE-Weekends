@@ -196,7 +196,9 @@ def test_engine_end_to_end(env):
     buttons = [b for m in tg.sent[before:] for row in (m[2] or []) for b in row]
     assert any(b["callback_data"].startswith("r:") for b in buttons)
     # pressing 👎 stores a rating for that city
-    data = next(b["callback_data"] for b in buttons if b["callback_data"].endswith(":-1"))
+    assert [b["text"] for b in buttons[:6]] == ["👎 страна", "👎 город", "👎 жильё", "👎 рейс туда", "👎 рейс обратно", "👍 нравится"] or \
+        [b["text"] for b in buttons[:5]] == ["👎 страна", "👎 город", "👎 рейс туда", "👎 рейс обратно", "👍 нравится"]
+    data = next(b["callback_data"] for b in buttons if b["text"] == "👎 город")
     app.state.bot.handle({"callback_query": {"id": "1", "data": data, "from": {"id": 42},
                                              "message": {"message_id": 5, "chat": {"id": 42, "type": "private"}}}})
     assert engine.store.ratings(42)["city:NAP"][0] == -1

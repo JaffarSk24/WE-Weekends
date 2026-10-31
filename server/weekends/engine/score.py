@@ -91,7 +91,7 @@ def score(c: Candidate, settings: dict, budget: float, ratings: dict[str, tuple[
         p -= min(40.0, 60 * (1 - c.flight_price / c.usual)) * k("discount")
     # soft ratings from the buttons, fading out over 60 days
     now = time.time()
-    for aspect in (f"city:{c.it.dest}", f"country:{c.it.country}", f"slots:{c.out_slot}:{c.ret_slot}"):
+    for aspect in (f"city:{c.it.dest}", f"country:{c.it.country}", f"out:{c.out_slot}", f"back:{c.ret_slot}"):
         if aspect in ratings:
             value, at = ratings[aspect]
             fade = max(0.0, 1 - (now - at) / (60 * 86400))
