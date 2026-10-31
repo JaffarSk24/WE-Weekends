@@ -4,8 +4,6 @@ A free personal Telegram feed of cheap trips. You set departure airports, countr
 
 Settings page: https://jaffarsk24.github.io/WE-Weekends/ · Bot: [@WEWeekendsBot](https://t.me/WEWeekendsBot)
 
-Русская версия: [README.ru.md](README.ru.md)
-
 ## Recommendations only
 
 WE Weekends sells and books nothing. You book directly with airlines and hotels yourself. We are not a travel agency and take no commissions from partners. Prices come from public sources and may change before you book.
@@ -15,7 +13,7 @@ WE Weekends sells and books nothing. You book directly with airlines and hotels 
 - `web/`: the settings page, plain HTML, CSS and JavaScript modules with no dependencies, published on GitHub Pages.
 - `server/`: the gateway (Python, FastAPI, SQLite) that stores settings, signs users in through the Telegram bot and runs the search. It runs in Docker behind nginx.
 
-The search engine uses no language model, so the service costs the same no matter how many people use it: searches are shared per departure airport and filtered for each user.
+The search is plain deterministic code, so the service costs the same no matter how many people use it: searches are shared per departure airport and filtered for each user.
 
 ## Status
 
