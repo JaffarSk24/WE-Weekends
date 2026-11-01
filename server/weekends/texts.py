@@ -37,6 +37,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "language": "Выберите язык:",
         "language_set": "Язык: русский.",
         "rated": "Учтено: такие варианты будут выше или ниже в подборке.",
+        "unrated": "Отметка снята.",
     },
     "sk": {
         "welcome": (
@@ -72,6 +73,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "language": "Vyberte jazyk:",
         "language_set": "Jazyk: slovenčina.",
         "rated": "Zaznamenané: podobné možnosti budú vo výbere vyššie alebo nižšie.",
+        "unrated": "Označenie zrušené.",
     },
     "en": {
         "welcome": (
@@ -107,6 +109,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "language": "Choose a language:",
         "language_set": "Language: English.",
         "rated": "Noted: options like this will rank higher or lower.",
+        "unrated": "Mark removed.",
     },
 }
 

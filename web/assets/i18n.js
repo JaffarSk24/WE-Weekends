@@ -203,7 +203,7 @@ export const T = {
     hotel_found: 'Цены будут: нашли «{name}», TripAdvisor {r} из 5, отзывов: {c}',
     hotel_not_found: 'Не нашли этот отель для цен. Если Booking его переименовал, впишите текущее название и сохраните:',
     hotel_alias: 'Текущее название отеля',
-    hotel_price_note: 'Цены отелей берутся из открытых источников: Booking.com, Agoda, Trip.com и другие сайты через TripAdvisor. Показываем самую низкую цену и цену Booking.com. Если отель не найдётся, рядом с ним появится поле для его текущего названия.',
+    hotel_price_note: 'Цены отелей берутся из открытых источников: Booking.com, Agoda, Trip.com и другие сайты через TripAdvisor. Показываем самую низкую цену и цену Booking.com. Если отель не найдётся, рядом с ним появится поле для его текущего названия. Цены проверяются каждый день: если цена отеля изменится, придёт короткое сообщение, полная сводка с рейсами по выбранной частоте.',
     privacy_title: 'Политика конфиденциальности',
     privacy_body: [
       'Оператор: White Eagles & Co. s. r. o., Словакия.',
@@ -416,7 +416,7 @@ export const T = {
     hotel_found: 'Ceny budú: našli sme „{name}“, TripAdvisor {r} z 5, recenzií: {c}',
     hotel_not_found: 'Tento hotel sme pre ceny nenašli. Ak ho Booking premenoval, napíšte súčasný názov a uložte:',
     hotel_alias: 'Súčasný názov hotela',
-    hotel_price_note: 'Ceny hotelov sú z verejných zdrojov: Booking.com, Agoda, Trip.com a ďalšie stránky cez TripAdvisor. Ukazujeme najnižšiu cenu aj cenu Booking.com. Ak hotel nenájdeme, pri ňom sa objaví pole na jeho súčasný názov.',
+    hotel_price_note: 'Ceny hotelov sú z verejných zdrojov: Booking.com, Agoda, Trip.com a ďalšie stránky cez TripAdvisor. Ukazujeme najnižšiu cenu aj cenu Booking.com. Ak hotel nenájdeme, pri ňom sa objaví pole na jeho súčasný názov. Ceny kontrolujeme každý deň: keď sa cena hotela zmení, príde krátka správa, úplný prehľad s letmi podľa zvolenej frekvencie.',
     privacy_title: 'Zásady ochrany súkromia',
     privacy_body: [
       'Prevádzkovateľ: White Eagles & Co. s. r. o., Slovensko.',
@@ -629,7 +629,7 @@ export const T = {
     hotel_found: 'Prices coming: found "{name}", TripAdvisor {r} of 5, {c} reviews',
     hotel_not_found: 'We could not find this hotel for prices. If Booking renamed it, type its current name and save:',
     hotel_alias: 'Current hotel name',
-    hotel_price_note: 'Hotel prices come from public sources: Booking.com, Agoda, Trip.com and other sites via TripAdvisor. We show the lowest price and the Booking.com price. If a hotel is not found, a field for its current name appears next to it.',
+    hotel_price_note: 'Hotel prices come from public sources: Booking.com, Agoda, Trip.com and other sites via TripAdvisor. We show the lowest price and the Booking.com price. If a hotel is not found, a field for its current name appears next to it. Prices are checked daily: when a hotel price changes you get a short message, the full summary with flights comes at the frequency you chose.',
     privacy_title: 'Privacy policy',
     privacy_body: [
       'Operator: White Eagles & Co. s. r. o., Slovakia.',

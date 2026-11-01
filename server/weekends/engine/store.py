@@ -87,6 +87,10 @@ class Store:
         with self.db.tx() as con:
             con.execute("INSERT OR REPLACE INTO ratings VALUES (?, ?, ?, ?)", (chat_id, aspect, value, int(time.time())))
 
+    def unrate(self, chat_id: int, aspect: str) -> None:
+        with self.db.tx() as con:
+            con.execute("DELETE FROM ratings WHERE chat_id = ? AND aspect = ?", (chat_id, aspect))
+
     def button(self, button_id: str, chat_id: int, aspect: str) -> None:
         with self.db.tx() as con:
             con.execute("INSERT OR REPLACE INTO buttons VALUES (?, ?, ?, ?)", (button_id, chat_id, aspect, int(time.time())))

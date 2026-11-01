@@ -16,6 +16,7 @@ from .users import Users
 
 log = logging.getLogger("weekends.bot")
 
+CHECK = "✓ "
 LOGIN_ARG = re.compile(r"^l_([A-Za-z0-9_-]{32})$")
 COMMAND = re.compile(r"^/([a-z_]{1,32})(?:@[A-Za-z0-9_]{1,64})?(?:\s+(\S{1,64}))?\s*$")
 
@@ -136,13 +137,44 @@ class Bot:
             if len(parts) == 3 and parts[2] in ("1", "-1") and re.fullmatch(r"[0-9a-f]{12}", parts[1]):
                 aspect = self.store.button_aspect(parts[1], chat_id)
                 if aspect:
-                    self.store.rate(chat_id, aspect, int(parts[2]))
-                    self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64], text=t(lang, "rated"))
+                    self._rate(query, chat_id, lang, data, parts[1], aspect, int(parts[2]))
         elif data in ("lang:ru", "lang:sk", "lang:en"):
             new = data[5:]
             self.users.set_lang(chat_id, new)
             self._edit(chat_id, message_id, t(new, "language_set"))
             self._menu_button(chat_id, new)
+
+    def _rate(self, query: dict, chat_id: int, lang: str, data: str, button_id: str, aspect: str, value: int) -> None:
+        """A press marks the button with ✓ and a second press takes the mark
+        and the rating back, as in a checklist. 👍 and 👎 for the same city
+        exclude each other."""
+        message = query.get("message") or {}
+        rows = ((message.get("reply_markup") or {}).get("inline_keyboard")) or []
+        pressed = next((b for row in rows for b in row if isinstance(b, dict) and b.get("callback_data") == data), None)
+        was_on = bool(pressed and str(pressed.get("text", "")).startswith(CHECK))
+        if was_on:
+            self.store.unrate(chat_id, aspect)
+        else:
+            self.store.rate(chat_id, aspect, value)
+        new_rows = []
+        for row in rows:
+            new_row = []
+            for b in row:
+                if not isinstance(b, dict) or "callback_data" not in b:
+                    continue
+                text = str(b.get("text", ""))
+                plain = text[len(CHECK):] if text.startswith(CHECK) else text
+                cd = str(b["callback_data"])
+                if cd == data:
+                    text = plain if was_on else CHECK + plain
+                elif cd.startswith(f"r:{button_id}:"):
+                    text = plain  # the opposite vote on the same aspect
+                new_row.append({"text": text[:64], "callback_data": cd})
+            if new_row:
+                new_rows.append(new_row)
+        self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64], text=t(lang, "unrated" if was_on else "rated"))
+        if isinstance(message.get("message_id"), int) and new_rows:
+            self.tg.call("editMessageReplyMarkup", chat_id=chat_id, message_id=message["message_id"], reply_markup={"inline_keyboard": new_rows})
 
     def _edit(self, chat_id: int, message_id: Any, text: str) -> None:
         if isinstance(message_id, int):

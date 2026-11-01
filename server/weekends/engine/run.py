@@ -296,7 +296,12 @@ class Engine:
                     best = f
         return best
 
-    def vacation(self, s: dict, lang: str, today: date) -> list[str]:
+    def vacation(self, s: dict, lang: str, today: date, full: bool = True, sent: dict[str, float] | None = None) -> tuple[list[str], list[tuple[str, float]]]:
+        """The holiday block. full: everything (on the user's day). Otherwise
+        only tracked hotels whose price moved by 3% or more since it was last
+        sent, or that were never sent, so a price change is never missed."""
+        sent = sent or {}
+        sent_items: list[tuple[str, float]] = []
         v = s["blocks"]["vacation"]
         t = dg.TX[lang]
         ex = Exclusions(s["geography"]["exclude_places"])
@@ -316,26 +321,38 @@ class Engine:
                 continue
             nights = (end - start).days
             who = (t["family"] + dg.party(lang, adults, len(ages))) if mode == "family" else t["solo"]
-            lines = [f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"]
+            title = f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"
+            lines = [title if full else f"{title}\n<i>{dg.e(t['vac_changed'])}</i>"]
             booking_q = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
             for m in matches:
                 link = dg.e(m.url + booking_q)
                 if m.status != "found":
+                    if not full:
+                        continue
                     slug = m.url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ").title()
                     lines.append(t["vac_hotel_unknown"].format(url=link, name=dg.e(slug)))
                     continue
                 priced = self.tracked.price(m.key, start.isoformat(), end.isoformat(), guests, nights)
                 rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews)
                 if priced is None:
+                    if not full:
+                        continue
                     lines.append(t["vac_hotel_noprice"].format(url=link, name=dg.e(m.name), rating=dg.e(rating)))
                     continue
                 total, source, booking_total = priced
+                key = f"vac:{m.key}:{start}:{end}:{guests}"
+                prev = sent.get(key)
+                if not full and prev is not None and abs(total - prev) < prev * 0.03:
+                    continue
+                sent_items.append((key, float(total)))
                 usual = self.store.usual_price(f"hotel:{m.key}:{guests}", f"{start}:{end}")
                 self.store.record_price(f"hotel:{m.key}:{guests}", f"{start}:{end}", today.isoformat(), total)
                 line = t["vac_hotel"].format(url=link, name=dg.e(m.name), rating=dg.e(rating), p=total, n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(source))
                 if booking_total:
                     line += t["vac_booking"].format(p=booking_total)
-                if usual and total < usual * 0.97:
+                if prev is not None and abs(total - prev) >= prev * 0.03:
+                    line += t["vac_was"].format(p=round(prev))
+                elif usual and total < usual * 0.97:
                     line += t["cheaper"].format(x=round(100 * (1 - total / usual)))
                 lines.append(line)
                 airport = nearest(m.lat, m.lon, {c: d for c, d in destinations().items() if d.get("country", "").lower() == m.url.split("/hotel/", 1)[-1][:2]}) if m.lat is not None else None
@@ -348,6 +365,10 @@ class Engine:
                         lines.append(t["vac_total"].format(t=round(total + f.price)))
                     else:
                         lines.append(t["vac_no_direct"].format(dest=dg.e(airport)))
+            if not full:
+                if len(lines) > 1:
+                    blocks.append("\n".join(lines))
+                continue
             flights = []
             for origin in s["profile"]["origins"]:
                 for country in v["countries"]:
@@ -369,9 +390,9 @@ class Engine:
             if v["countries"] and not flights:
                 lines.append(t["vac_no_flights"])
             blocks.append("\n".join(lines))
-        if blocks and v["suggest"]["enabled"]:
+        if full and blocks and v["suggest"]["enabled"]:
             blocks[-1] += "\n\n" + t["vac_suggest_off"]
-        return blocks
+        return blocks, sent_items
 
     def build(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> tuple[list[tuple[str, list[list[dict]] | None]], list[tuple[str, float]]]:
         """One message per trip with its own buttons, like a conversation."""
@@ -415,9 +436,12 @@ class Engine:
                     lines.append(f'🔥 <a href="{dg.e(d.url)}">{dg.e(d.agency)}</a>: {dg.e(d.title)}{price}')
                     sent_items.append((f"wow:{d.id}", float(d.price or 0)))
                 messages.append(("\n\n".join(lines)[:4000], None))
-        if "vacation" in due:
-            for block in self.vacation(s, lang, today):
+        if s["blocks"]["vacation"]["enabled"]:
+            # the full block on its day, otherwise only hotel price changes
+            blocks, vac_items = self.vacation(s, lang, today, full="vacation" in due, sent=sent_before)
+            for block in blocks:
                 messages.append((block[:4000], None))
+            sent_items += vac_items
         return messages, sent_items
 
     def send_digest(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> int:

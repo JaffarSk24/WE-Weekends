@@ -247,3 +247,51 @@ def test_tracked_hotel_matching():
     assert similarity(slug, "Lonicera World Hotel") < 0.75
     assert similarity(slug_words("https://www.booking.com/hotel/tr/letoonia-golf-resort.html")[1], "Selectum Family Resort Belek") == 0
     assert similarity(["selectum", "family", "resort", "belek"], "Selectum Family Resort Belek") >= 0.99
+
+
+def test_rating_buttons_tick_and_untick(env):
+    _, tg, app = env
+    bot = app.state.bot
+    bot.store.button("aaaaaaaaaaaa", 42, "city:NAP")
+    keyboard = [[{"text": "👎 город", "callback_data": "r:aaaaaaaaaaaa:-1"}], [{"text": "👍 нравится", "callback_data": "r:aaaaaaaaaaaa:1"}]]
+    def press(data, rows):
+        bot.handle({"callback_query": {"id": "1", "data": data, "from": {"id": 42},
+                                       "message": {"message_id": 7, "chat": {"id": 42, "type": "private"}, "reply_markup": {"inline_keyboard": rows}}}})
+        return next(p["reply_markup"]["inline_keyboard"] for m, p in reversed(tg.calls) if m == "editMessageReplyMarkup")
+    rows = press("r:aaaaaaaaaaaa:-1", keyboard)
+    assert rows[0][0]["text"] == "✓ 👎 город" and bot.store.ratings(42)["city:NAP"][0] == -1
+    rows = press("r:aaaaaaaaaaaa:1", rows)  # the opposite vote replaces the first
+    assert rows[0][0]["text"] == "👎 город" and rows[1][0]["text"] == "✓ 👍 нравится" and bot.store.ratings(42)["city:NAP"][0] == 1
+    rows = press("r:aaaaaaaaaaaa:1", rows)  # second press takes it back
+    assert rows[1][0]["text"] == "👍 нравится" and "city:NAP" not in bot.store.ratings(42)
+
+
+def test_holiday_updates_only_on_price_change(env):
+    from datetime import date
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": [],
+                               "date_options": [{"start": "2027-05-24", "end": "2027-06-04"}],
+                               "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
+    client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    price = {"v": 3531}
+
+    class T:
+        def resolve(self, url, alias="", geos=None):
+            from weekends.engine.tracked import Match
+            return Match(url=url, status="found", key="g1-d2", name="Lonicera", rating=4.4, reviews=10)
+
+        def price(self, *a):
+            return (price["v"], "Booking.com", None)
+
+    engine.tracked = T()
+    s = engine.users()[0][2]
+    blocks, items = engine.vacation(s, "ru", date(2026, 11, 1), full=False, sent={})
+    assert blocks and items  # never sent before: goes out
+    sent = dict(items)
+    assert engine.vacation(s, "ru", date(2026, 11, 2), full=False, sent=sent)[0] == []  # same price: quiet
+    price["v"] = 3300
+    blocks, _ = engine.vacation(s, "ru", date(2026, 11, 3), full=False, sent=sent)
+    assert blocks and "было 3531€" in blocks[0]
