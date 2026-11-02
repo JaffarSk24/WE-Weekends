@@ -36,6 +36,11 @@ class Itinerary:
     flights: str
     url: str
     image: str
+    ret_airline: str = ""
+
+    @property
+    def airlines(self) -> str:
+        return self.airline if self.ret_airline in ("", self.airline) else f"{self.airline} / {self.ret_airline}"
 
     @property
     def key(self) -> str:
@@ -74,6 +79,7 @@ def parse(item: dict[str, Any]) -> Itinerary | None:
             airline=seg.get("carrierName") or seg.get("carrier", ""),
             flights=f"{seg.get('carrier', '')}{seg.get('flightNumber', '')}/{rseg.get('carrier', '')}{rseg.get('flightNumber', '')}",
             url=str(item.get("bookingUrl", "")), image=str(item.get("imageId", "")),
+            ret_airline=rseg.get("carrierName") or rseg.get("carrier", ""),
         )
     except (KeyError, IndexError, TypeError, ValueError):
         return None

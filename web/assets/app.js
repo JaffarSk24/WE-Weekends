@@ -584,7 +584,8 @@ function settingsView() {
       field(t('suggest_max'), numberInput(sug, 'max_hotel_eur', 100, 50000, 1, '€')),
       group(t('min_stars'), segmented(sug, 'min_stars', [[0, t('stars_any')], [3, '3+'], [4, '4+'], [5, '5']]))),
     group(t('min_rating'), segmented(sug, 'min_rating', [[7.5, '7.5+'], [8, '8+'], [8.5, '8.5+'], [9, '9+']])),
-    toggle(sug, 'all_inclusive', t('all_inclusive')), toggle(sug, 'aquapark', t('aquapark')));
+    toggle(sug, 'all_inclusive', t('all_inclusive')), toggle(sug, 'aquapark', t('aquapark')),
+    h('p', { class: 'hint' }, t('suggest_beach')));
   const feeds = panel(t('tab_feeds'), t('feeds_intro'),
     h('div', { class: 'feeds' },
       feed('weekends', '🌊'),

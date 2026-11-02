@@ -295,3 +295,91 @@ def test_holiday_updates_only_on_price_change(env):
     price["v"] = 3300
     blocks, _ = engine.vacation(s, "ru", date(2026, 11, 3), full=False, sent=sent)
     assert blocks and "было 3531€" in blocks[0]
+
+
+class RouteKiwi:
+    """Answers exact-date searches with `exact` and range searches with `shifted`."""
+
+    def __init__(self, exact, shifted=()):
+        self.exact, self.shifted = list(exact), list(shifted)
+
+    def search(self, country="", **args):
+        pool = self.shifted if args.get("departureDateTo") else self.exact
+        out = [i for i in pool if i.dest == args.get("flyTo")]
+        if "dtime_to" in args:
+            out = [i for i in out if i.depart.hour <= args["dtime_to"]]
+        if "ret_dtime_from" in args:
+            out = [i for i in out if i.ret_depart.hour >= args["ret_dtime_from"]]
+        return out
+
+
+class PriceTracked:
+    def __init__(self, prices):
+        self.prices = prices
+
+    def price(self, key, checkin, checkout, guests, nights):
+        p = self.prices.get((key, checkin, checkout))
+        return (p, "Booking.com", None) if p else None
+
+
+def holiday_engine(kiwi, tracked=None):
+    engine = Engine.__new__(Engine)
+    engine.kiwi, engine.tracked = kiwi, tracked or PriceTracked({})
+    return engine
+
+
+def test_holiday_flight_keeps_the_first_and_last_day():
+    from weekends.engine.run import holiday_loss, stay_dates
+    late = itin("2027-05-27T10:50", "2027-06-06T23:10", price=778, dest="AYT", ret_depart="2027-06-06T21:40")
+    late = Itinerary(**{**late.__dict__, "arrive": datetime(2027, 5, 27, 14, 5), "airline": "Pegasus"})
+    night = itin("2027-05-27T00:25", "2027-06-06T23:10", price=781, dest="AYT", ret_depart="2027-06-06T21:40")
+    night = Itinerary(**{**night.__dict__, "arrive": datetime(2027, 5, 27, 3, 40), "airline": "SunExpress"})
+    early_back = itin("2027-05-27T00:25", "2027-06-06T10:30", price=600, dest="AYT", ret_depart="2027-06-06T09:00")
+    early_back = Itinerary(**{**early_back.__dict__, "arrive": datetime(2027, 5, 27, 3, 40)})
+    assert holiday_loss(night) == 0 and holiday_loss(late) > 6
+    assert stay_dates(night) == (date(2027, 5, 27), date(2027, 6, 6))
+    after_midnight = Itinerary(**{**night.__dict__, "ret_depart": datetime(2027, 6, 7, 0, 20)})
+    assert stay_dates(after_midnight) == (date(2027, 5, 27), date(2027, 6, 6)) and holiday_loss(after_midnight) == 0
+    engine = holiday_engine(RouteKiwi([late, night, early_back]))
+    best, cheaper = engine._tracked_flight({"profile": {"origins": ["BTS"]}}, "AYT", "tr", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0))
+    assert best.airline == "SunExpress" and best.ret_depart.hour == 21
+    assert cheaper is early_back  # 181€ cheaper but loses the last day: mentioned, not chosen
+
+
+def test_holiday_without_direct_flights_offers_nearby_dates():
+    from weekends.engine.tracked import Match
+    shifted = itin("2027-05-26T11:25", "2027-06-06T12:30", price=601, dest="CFU", country="GR", ret_depart="2027-06-06T20:55")
+    m = Match(url="https://www.booking.com/hotel/gr/canvas-by-mitsis-messonghi.html", status="found", key="g1-d2", name="Canvas", lat=39.48, lon=19.93)
+    tracked = PriceTracked({("g1-d2", "2026-05-26", "2027-06-06"): 1, ("g1-d2", "2027-05-26", "2027-06-06"): 2277})
+    engine = holiday_engine(RouteKiwi([], [shifted]), tracked)
+    lines = engine._flight_lines({"profile": {"origins": ["BTS"]}}, "ru", m, date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), 3, 2080)
+    text = "\n".join(lines)
+    assert "прямых рейсов в CFU" in text and "сдвинуть даты" in text
+    assert "26.05" in text and "601€" in text and "≈2277€ (+197€" in text and "≈2878€" in text
+
+
+def test_hotel_suggestions_follow_the_rules(monkeypatch):
+    from weekends.engine import run
+    from weekends.engine.places import Exclusions
+    facts = [
+        {"url": "https://www.booking.com/hotel/tr/a.html", "name": "Aqua Resort", "cc": "tr", "city": "Belek", "lat": 36.85, "lon": 31.05,
+         "stars": 5, "score": 8.8, "reviews": 900, "ai": True, "aqua": True, "ta": "g1-d1"},
+        {"url": "https://www.booking.com/hotel/tr/b.html", "name": "Plain Resort", "cc": "tr", "city": "Belek", "lat": 36.85, "lon": 31.05,
+         "stars": 5, "score": 8.9, "reviews": 900, "ai": True, "aqua": False, "ta": "g1-d2"},
+        {"url": "https://www.booking.com/hotel/tr/c.html", "name": "Four Star", "cc": "tr", "city": "Side", "lat": 36.77, "lon": 31.39,
+         "stars": 4, "score": 9.0, "reviews": 900, "ai": True, "aqua": True, "ta": "g1-d3"},
+        {"url": "https://www.booking.com/hotel/tr/d.html", "name": "Kemer Palace", "cc": "tr", "city": "Kemer", "lat": 36.6, "lon": 30.55,
+         "stars": 5, "score": 9.0, "reviews": 900, "ai": True, "aqua": True, "ta": "g1-d4"},
+    ]
+    monkeypatch.setattr(run, "hotel_facts", lambda: facts)
+    prices = {(h["ta"], "2027-05-27", "2027-06-06"): 2500 for h in facts}
+    engine = holiday_engine(RouteKiwi([]), PriceTracked(prices))
+    s = settings(blocks__vacation__countries=["TR"], blocks__vacation__suggest={"enabled": True, "max_hotel_eur": 3000, "min_stars": 5,
+                                                                                "all_inclusive": True, "aquapark": True, "min_rating": 8.5})
+    lines = engine._suggestions(s, "ru", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), (8,), Exclusions(["kemer"]))
+    text = "\n".join(lines)
+    assert "Aqua Resort" in text and "5★ · аквапарк · всё включено" in text and "≈2500€" in text and "checkin=2027-05-27" in text
+    assert "Plain Resort" not in text and "Four Star" not in text and "Kemer Palace" not in text
+    assert "первой линии" in text
+    s["blocks"]["vacation"]["suggest"]["max_hotel_eur"] = 2000
+    assert engine._suggestions(s, "ru", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), (8,), Exclusions([]))[0].startswith("✨ Под ваши")

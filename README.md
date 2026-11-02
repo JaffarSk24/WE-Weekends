@@ -30,7 +30,7 @@ You tell WE Weekends where you fly from, where you would like to go, how much yo
 
 **Last-minute packages.** Headlines and prices from Slovak and Czech agencies.
 
-**Holiday.** Your own holiday dates: direct flights to the countries you chose and your tracked hotels with your dates and party already filled in.
+**Holiday.** Your own holiday dates: direct flights to the countries you chose and your tracked hotels with your dates and party already filled in. Each hotel comes with the flight pair that keeps the first and the last day, and when the exact dates have no direct flight, the nearest dates that do, with the hotel's price for them. New hotels can be suggested by your rules: stars, all inclusive, water park, review score and a price limit for the whole stay. Some suggested hotels are not on the seafront, and in Spain many have no beach of their own, so check the hotel page before you book.
 
 Every trip has 👍 and 👎 buttons. They only reorder future suggestions and fade out after two months; nothing is ever hidden for good.
 
@@ -72,6 +72,7 @@ GitHub Pages (web/)  ──HTTPS──>  nginx  ──>  gateway (FastAPI, SQLit
 
 - **Flights:** Kiwi.com search, direct flights only. Searches run once per departure airport and country and are shared by all users, so the cost does not grow with the number of people.
 - **Stays:** Booking.com Demand API when credentials are configured; otherwise public rates from Booking.com, Agoda and Trip.com via Xotelo; otherwise a Booking.com search link with the dates, party and filters.
+- **Hotel facts for suggestions:** official stars, all inclusive, water park and kids' facilities of resort hotels in the main beach regions, as Booking.com lists them (`server/weekends/data/hotel_facts.json`, built by `server/scripts/build_hotel_facts.py`). Prices for your dates still come from the stay sources above, daily.
 - **Weather:** Open-Meteo forecast for the next two weeks, the same dates last year further out.
 - **Data:** public holidays from `holidays`, entry rules from the passport-index dataset with EU residence waivers, destinations from Wikidata.
 - **Everything is deterministic code.** No paid services are called per user.
