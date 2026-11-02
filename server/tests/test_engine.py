@@ -297,6 +297,30 @@ def test_holiday_updates_only_on_price_change(env):
     assert blocks and "было 3531€" in blocks[0]
 
 
+def test_holiday_other_flights_keep_the_first_and_last_day(env):
+    from datetime import date
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": ["TR"], "hotels": [],
+                               "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}]}
+    client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    late = itin("2027-05-27T10:50", "2027-06-06T23:10", price=778, dest="AYT", country="TR", ret_depart="2027-06-06T21:40")
+    late = Itinerary(**{**late.__dict__, "arrive": datetime(2027, 5, 27, 14, 5), "airline": "Pegasus"})
+    night = itin("2027-05-27T00:25", "2027-06-06T23:10", price=781, dest="AYT", country="TR", ret_depart="2027-06-06T21:40")
+    night = Itinerary(**{**night.__dict__, "arrive": datetime(2027, 5, 27, 3, 40), "airline": "SunExpress"})
+
+    class K:
+        def search(self, country="", **args):
+            # one result per city, the cheapest one unless the times are narrowed
+            return [night] if "dtime_to" in args else [late]
+
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    engine.kiwi = K()
+    blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 2), full=True, sent={})
+    assert "SunExpress" in blocks[0] and "Pegasus" not in blocks[0]
+
+
 class RouteKiwi:
     """Answers exact-date searches with `exact` and range searches with `shifted`."""
 

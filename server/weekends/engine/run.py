@@ -543,13 +543,14 @@ class Engine:
             flights = []
             for origin in s["profile"]["origins"]:
                 for country in v["countries"]:
-                    flights += self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(start), returnDate=kdate(end),
-                                                adults=adults, children=children, infants=infants, one_for_city=True,
-                                                adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults)
+                    for times in ({}, {"dtime_to": 11, "ret_dtime_from": 16}):  # the cheapest and the well-timed, as under a hotel
+                        flights += self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(start), returnDate=kdate(end),
+                                                    adults=adults, children=children, infants=infants, one_for_city=True,
+                                                    adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults, **times)
             flights = [f for f in flights if not ex.destination(f.dest, city_name(f.dest, f.city, "en"))]
-            flights.sort(key=lambda f: f.price)
+            flights.sort(key=_holiday_cost)
             cheapest: dict[str, Itinerary] = {}
-            for f in flights:  # one line per destination, from whichever airport is cheaper
+            for f in flights:  # one line per destination: the pair that keeps most of the holiday
                 cheapest.setdefault(f.dest, f)
             if cheapest:
                 lines.append(t["vac_flights"])
