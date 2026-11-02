@@ -543,7 +543,7 @@ class Engine:
             flights = []
             for origin in s["profile"]["origins"]:
                 for country in v["countries"]:
-                    for times in ({}, {"dtime_to": 11, "ret_dtime_from": 16}):  # the cheapest and the well-timed, as under a hotel
+                    for times in ({}, {"dtime_to": 11, "ret_dtime_from": 16}, {"dtime_to": 6, "ret_dtime_from": 16}):  # one per city: the cheapest, the well-timed, the night ones
                         flights += self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(start), returnDate=kdate(end),
                                                     adults=adults, children=children, infants=infants, one_for_city=True,
                                                     adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults, **times)
@@ -557,7 +557,7 @@ class Engine:
             for f in list(cheapest.values())[:MAX_ITEMS["vacation"]]:
                 name = city_name(f.dest, f.city, lang)
                 url = f.url if f.url.startswith("https://") else "https://www.kiwi.com/"
-                lines.append(f'{dg.flag(f.country)} <a href="{dg.e(url)}">{dg.e(name)}</a> {dg.e(f.dest)}, {dg.e(f.airline)}: '
+                lines.append(f'{dg.flag(f.country)} <a href="{dg.e(url)}">{dg.e(name)}</a> {dg.e(f.dest)}, {dg.e(f.airlines)}: '
                              f"{dg.e(dg.when(lang, f.depart))} / {dg.e(dg.when(lang, f.ret_depart))} · <b>{round(f.price)}€</b>")
             if v["countries"] and not flights:
                 lines.append(t["vac_no_flights"])

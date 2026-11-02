@@ -312,8 +312,8 @@ def test_holiday_other_flights_keep_the_first_and_last_day(env):
 
     class K:
         def search(self, country="", **args):
-            # one result per city, the cheapest one unless the times are narrowed
-            return [night] if "dtime_to" in args else [late]
+            # one result per city, the cheapest one in the asked window: 10:50 still fits "before 11"
+            return [night] if args.get("dtime_to") == 6 else [late]
 
     engine = Engine(app.state.cfg, app.state.db, tg)
     engine.kiwi = K()
