@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.13'
+          python-version: '3.15'
       - run: pip install --require-hashes -r requirements.txt
       - run: pip install -r requirements-dev.txt
       - run: ruff check --select E,F,W,B,S,UP,I --ignore E501,S101,S104 weekends tests
