@@ -525,3 +525,27 @@ def test_holiday_price_change_is_marked_on_the_counted_price(env):
     hotel, sfl = blocks[0].split("\n")[2:4]
     assert "≈3210€" in hotel and "было" not in hotel
     assert "≈1480€" in sfl and sfl.endswith("(было 3300€)") and dict(items)[key] == 1480
+
+
+def test_stayforlong_asks_for_no_children_and_keeps_no_odd_answer(tmp_path, monkeypatch):
+    import httpx
+
+    from weekends.db import Database
+    from weekends.engine import stayforlong
+    monkeypatch.setattr(stayforlong, "PAUSE", 0)
+    asked = []
+
+    def handler(request):
+        asked.append(request.url)
+        if "childrenByRoom" not in str(request.url):
+            return httpx.Response(200, json={"defaults": {}})  # what the gateway answers without it
+        return httpx.Response(200, json={"40494": {"availability": [sfl_rate(1750)]}})
+
+    sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s.sqlite")), sfl_client(handler))
+    assert sfl.best("40494", "tr/x_serik", "en", "2027-05-27", "2027-06-06", 1, ()).total == 1750
+    assert "childrenByRoom=0" in str(asked[0]) and "childrenAges" not in str(asked[0])
+    monkeypatch.setattr(stayforlong, "GATEWAY", "https://gw.example")
+    odd = stayforlong.Stayforlong(Database(str(tmp_path / "o.sqlite")), sfl_client(lambda r: httpx.Response(200, json={"defaults": {}})))
+    assert odd.offers("1", "2027-05-27", "2027-06-06", 1, ()) == []
+    with odd.db.tx() as con:
+        assert con.execute("SELECT COUNT(*) FROM sfl_cache").fetchone()[0] == 0

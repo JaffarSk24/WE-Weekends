@@ -148,12 +148,15 @@ class Stayforlong:
         if row and time.time() - row["fetched_at"] < PRICES_TTL:
             return json.loads(row["body"])
         params = {"adultsByRoom": adults, "checkin": checkin, "checkout": checkout, "lang": "en", "language": "en", "market": "sk",
-                  "currency": "EUR", "device": "desktop", "affiliate": "stayforlong", "source": "web"}
+                  "currency": "EUR", "device": "desktop", "affiliate": "stayforlong", "source": "web",
+                  "childrenByRoom": len(ages)}  # without it the gateway answers with the hotel description, not its rates
         if ages:
-            params |= {"childrenAges": ",".join(map(str, ages)), "childrenByRoom": len(ages)}
+            params["childrenAges"] = ",".join(map(str, ages))
         data = self._request("GET", f"{GATEWAY}/v4/availability/property/{sfl_id}", params=params)
-        if not isinstance(data, dict):
-            return []
+        if not isinstance(data, dict) or sfl_id not in data:
+            if data is not None:
+                log.warning("stayforlong answered without rates for %s", sfl_id)
+            return []  # not cached: tried again next time
         rates = []
         for a in (data.get(sfl_id) or {}).get("availability") or []:
             total = ((a.get("summary") or {}).get("total_with_fees") or {}).get("amount")
