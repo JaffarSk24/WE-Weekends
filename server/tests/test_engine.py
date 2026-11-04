@@ -346,9 +346,10 @@ class PriceTracked:
         return (p, "Booking.com", None) if p else None
 
 
-def holiday_engine(kiwi, tracked=None):
+def holiday_engine(kiwi, tracked=None, sfl=None):
+    from weekends.engine import run
     engine = Engine.__new__(Engine)
-    engine.kiwi, engine.tracked = kiwi, tracked or PriceTracked({})
+    engine.kiwi, engine.tracked, engine.sfl = kiwi, tracked or PriceTracked({}), sfl or run.Stayforlong(None)
     return engine
 
 
@@ -407,3 +408,90 @@ def test_hotel_suggestions_follow_the_rules(monkeypatch):
     assert "первой линии" in text
     s["blocks"]["vacation"]["suggest"]["max_hotel_eur"] = 2000
     assert engine._suggestions(s, "ru", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), (8,), Exclusions([]))[0].startswith("✨ Под ваши")
+
+
+def sfl_rate(total, board="AI", policy="NOR", pay_now=0, until="2027-05-15", prime=False):
+    return {"summary": {"total_with_fees": {"amount": total}}, "board_group_code": board, "payment_policy": policy, "pay_rate": pay_now,
+            "cancellation_policies": [{"amount": pay_now, "from": until}] if policy != "NRF" else [], "is_prime": prime, "currency": "EUR", "rooms": 1}
+
+
+def sfl_client(handler):
+    import httpx
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_stayforlong_rates_follow_the_conditions(tmp_path, monkeypatch):
+    import httpx
+
+    from weekends.db import Database
+    from weekends.engine import stayforlong
+    monkeypatch.setattr(stayforlong, "PAUSE", 0)
+    asked = []
+
+    def handler(request):
+        asked.append(request.url)
+        return httpx.Response(200, json={"40494": {"availability": [
+            sfl_rate(2260), sfl_rate(2190, policy="SFL", pay_now=114), sfl_rate(2000, board="RO", policy="NRF", pay_now=2000),
+            sfl_rate(1500, prime=True)]}})
+
+    sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s.sqlite")), sfl_client(handler))
+    args = ("40494", "tr/selectum-family-resort-belek_serik", "ru", "2027-05-27", "2027-06-06", 2, (8,))
+    best = sfl.best(*args, all_inclusive=True)
+    assert (best.total, best.policy, best.pay_now) == (2190, "SFL", 114)  # Prime needs a membership, room only is not all inclusive
+    assert "childrenAges=8" in str(asked[0]) and best.url.endswith("checkIn=2027-05-27&checkOut=2027-06-06&children=8")
+    assert sfl.best(*args, all_inclusive=True, free_cancellation=True).total == 2260
+    assert sfl.best(*args, all_inclusive=True, pay_later=True).total == 2190
+    assert sfl.best(*args).total == 2000
+    assert len(asked) == 1  # the rates are cached for all users with the same stay
+
+
+def test_stayforlong_search_finds_the_same_hotel(tmp_path, monkeypatch):
+    import httpx
+
+    from weekends.db import Database
+    from weekends.engine import stayforlong
+    monkeypatch.setattr(stayforlong, "PAUSE", 0)
+    asteria = {"ID": "40523", "Slug": "asteria-family-resort-belek", "CitySlug": "serik", "Country": "tr", "Type": "hotel",
+               "Text": "Asteria Family Resort Belek", "Coordinate": {"lat": 36.851, "lon": 31.051}}
+    selectum = {**asteria, "ID": "40494", "Slug": "selectum-family-resort-belek", "Text": "Selectum Family Resort Belek"}
+    hits = {"v": [asteria, selectum]}
+    sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s.sqlite")), sfl_client(lambda r: httpx.Response(200, json=hits["v"])))
+    assert sfl.search("Selectum Family Resort Belek", 36.85, 31.05, "tr") == ("40494", "tr/selectum-family-resort-belek_serik")
+    hits["v"] = [asteria]
+    assert sfl.search("Selectum Family Resort Belek", 36.85, 31.05, "tr") is None
+    assert sfl.search("Selectum Family Resort Belek", 36.85, 31.05, "gr") is None
+
+
+class OfferSfl:
+    def __init__(self, offers):
+        self.offers = offers
+
+    def resolve(self, *a, **kw):
+        return ("40494", "tr/x_serik")
+
+    def best(self, sfl_id, path, lang, checkin, checkout, adults, ages, all_inclusive=False, free_cancellation=False, pay_later=False):
+        ok = [o for o in self.offers if (not free_cancellation or o.free_cancellation) and (not pay_later or o.pay_later)]
+        return min(ok, key=lambda o: o.total) if ok else None
+
+
+def test_holiday_counts_the_stayforlong_price(monkeypatch):
+    from weekends.engine import run
+    from weekends.engine.places import Exclusions
+    from weekends.engine.stayforlong import Offer
+    facts = [{"url": "https://www.booking.com/hotel/tr/a.html", "name": "Aqua Resort", "cc": "tr", "city": "Belek", "lat": 36.85, "lon": 31.05,
+              "stars": 5, "score": 8.8, "reviews": 900, "ai": True, "aqua": True, "ta": "g1-d1", "sfl": "40494:tr/a_serik"},
+             {"url": "https://www.booking.com/hotel/tr/b.html", "name": "Only There", "cc": "tr", "city": "Side", "lat": 36.77, "lon": 31.39,
+              "stars": 5, "score": 8.9, "reviews": 900, "ai": True, "aqua": True, "sfl": "40495:tr/b_side"}]
+    monkeypatch.setattr(run, "hotel_facts", lambda: facts)
+    deposit = Offer(total=2190, board="AI", policy="SFL", pay_now=114, until="2027-05-15", url="https://www.stayforlong.com/sk-sk/hotel/tr/a_serik")
+    engine = holiday_engine(RouteKiwi([]), PriceTracked({("g1-d1", "2027-05-27", "2027-06-06"): 4200}), OfferSfl([deposit]))
+    s = settings(blocks__vacation__countries=["TR"], blocks__vacation__suggest={"enabled": True, "max_hotel_eur": 3000, "min_stars": 5,
+                                                                                "all_inclusive": True, "aquapark": True, "min_rating": 8.5})
+    text = "\n".join(engine._suggestions(s, "ru", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), (8,), Exclusions([])))
+    # 4200€ on TripAdvisor is over the limit, 2190€ on Stayforlong is not; a hotel TripAdvisor has no prices for gets in too
+    assert "Aqua Resort" in text and "≈4200€" in text and "Stayforlong</a> ≈2190€, всё включено · сейчас 114€ без возврата, остальное до 15.05" in text
+    assert "Only There" in text
+    s["blocks"]["vacation"]["free_cancellation"] = True
+    s["blocks"]["vacation"]["suggest"]["max_hotel_eur"] = 5000
+    text = "\n".join(engine._suggestions(s, "ru", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), (8,), Exclusions([])))
+    assert "тарифов на ваших условиях" in text and "Only There" not in text  # no free cancellation: only the TripAdvisor price is left

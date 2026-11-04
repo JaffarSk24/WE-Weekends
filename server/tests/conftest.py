@@ -27,6 +27,25 @@ class FakeTelegram:
         return {}
 
 
+class NoStayforlong:
+    """Stands in for Stayforlong so tests never reach the network."""
+
+    def __init__(self, *a, **kw):
+        self.calls = 0
+
+    def resolve(self, *a, **kw):
+        return None
+
+    def best(self, *a, **kw):
+        return None
+
+
+@pytest.fixture(autouse=True)
+def no_stayforlong(monkeypatch):
+    from weekends.engine import run
+    monkeypatch.setattr(run, "Stayforlong", NoStayforlong)
+
+
 @pytest.fixture
 def env(tmp_path):
     cfg = Config(

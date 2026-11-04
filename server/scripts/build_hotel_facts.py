@@ -6,7 +6,8 @@ kids_pool, beachfront).
 Every hotel is matched once to TripAdvisor through Xotelo, the same way a
 tracked hotel is, and kept only when the match stands within 3 km of the
 Booking.com coordinates. The engine then prices it daily for the user's
-dates. Run again whenever the exports are refreshed:
+dates. Run again whenever the exports are refreshed, then
+add_stayforlong_ids.py for the hotels that are new:
 
     python scripts/build_hotel_facts.py exports/*.jsonl
 """
@@ -70,7 +71,7 @@ def load(paths: list[str]) -> dict[str, dict]:
 
 def main(paths: list[str]) -> None:
     hotels = load(paths)
-    old = {h["url"]: h.get("ta", "") for h in json.loads(OUT.read_text())} if OUT.exists() else {}
+    old = {h["url"]: h for h in json.loads(OUT.read_text())} if OUT.exists() else {}
     keys = tripadvisor_keys()
     geos: dict[str, list[str]] = {}
     for code, d in destinations().items():
@@ -87,8 +88,10 @@ def main(paths: list[str]) -> None:
                 points.append((g["latitude"], g["longitude"], str(item["key"]).split("-")[0]))
     kept = []
     for h in sorted(hotels.values(), key=lambda x: (x["cc"], x["city"], x["name"])):
-        if old.get(h["url"]):
-            h["ta"] = old[h["url"]]
+        if "sfl" in old.get(h["url"], {}):  # add_stayforlong_ids.py fills it for the new ones
+            h["sfl"] = old[h["url"]]["sfl"]
+        if old.get(h["url"], {}).get("ta"):
+            h["ta"] = old[h["url"]]["ta"]
         else:
             near: dict[str, int] = {}
             for lat, lon, geo in seen.get(h["cc"], []):

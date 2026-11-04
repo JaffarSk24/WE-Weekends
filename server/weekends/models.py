@@ -291,6 +291,9 @@ class Vacation(Block):
     # The hotel's current name, for when Booking renamed it but kept the address.
     hotel_names: Annotated[dict[str, Annotated[str, StringConstraints(max_length=100, pattern=r"^[^<>\x00-\x1f]*$")]], Field(max_length=10)] = {}
     suggest: Suggest = Suggest()
+    # Kept to on Stayforlong, the one source that says how a rate is paid.
+    free_cancellation: bool = False
+    pay_later: bool = False
 
 
 def _vacation_names(v: Vacation) -> Vacation:

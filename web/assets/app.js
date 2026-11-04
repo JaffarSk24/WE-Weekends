@@ -596,6 +596,8 @@ function settingsView() {
         group(t('dates'), rangeList(vac.date_options, 4, false)),
         group(t('vac_countries'), countryPicker(vac.countries, 30)),
         group(t('hotels'), hotels),
+        toggle(vac, 'free_cancellation', t('free_cancellation')), toggle(vac, 'pay_later', t('pay_later')),
+        h('p', { class: 'hint' }, t('terms_hint')),
         toggle(sug, 'enabled', t('suggest'), () => { sugBox.hidden = !sug.enabled; }), sugBox,
         h('p', { class: 'hint' }, t('hotel_price_note'))))));
 

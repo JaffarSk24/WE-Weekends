@@ -32,6 +32,7 @@ from .hotels import Hotels, StayQuery, tripadvisor_keys
 from .kiwi import Itinerary, Kiwi, kdate
 from .places import Exclusions
 from .score import Candidate, evaluate, score
+from .stayforlong import ALL_INCLUSIVE, Offer, Stayforlong
 from .store import Store
 from .tracked import Match, Tracked, nearest
 from .weather import WeatherSource
@@ -155,6 +156,7 @@ class Engine:
         self.store = Store(db)
         self.wow = WowFeed()
         self.tracked = Tracked(db)
+        self.sfl = Stayforlong(db)
         self.pool: dict[str, dict[str, Itinerary]] = defaultdict(dict)
         self.searched: set[tuple[str, str]] = set()
         self.pool_day: date | None = None
@@ -358,7 +360,7 @@ class Engine:
         cheapest = min(found.values(), key=lambda f: f.price)
         return best, (cheapest if cheapest.price <= best.price - CHEAPER_BY else None)
 
-    def _shifted(self, s: dict, m, start: date, end: date, party: tuple[int, int, int], guests: int) -> list[tuple[Itinerary, tuple[float, str, float | None] | None]]:
+    def _shifted(self, s: dict, m, start: date, end: date, party: tuple[int, int, int], price_of) -> list[tuple[Itinerary, int | None]]:
         """Direct flights a few days around the holiday when the exact dates
         have none or only ones that burn a day: up to two date pairs closest
         to the wanted ones, each with the hotel's price for the new dates."""
@@ -384,7 +386,7 @@ class Engine:
         ranked = sorted(by_dates.items(), key=lambda kv: (abs((kv[0][0] - start).days) + abs((kv[0][1] - end).days), _holiday_cost(kv[1])))
         out = []
         for (ci, co), f in ranked[:2]:
-            out.append((f, self.tracked.price(m.key, ci.isoformat(), co.isoformat(), guests, (co - ci).days)))
+            out.append((f, price_of(ci, co)))
         return out
 
     def _airport(self, m) -> str | None:
@@ -393,7 +395,8 @@ class Engine:
             return None
         return nearest(m.lat, m.lon, {c: d for c, d in destinations().items() if d.get("country", "").lower() == country})
 
-    def _flight_lines(self, s: dict, lang: str, m, start: date, end: date, party: tuple[int, int, int], guests: int, hotel_total: float) -> list[str]:
+    def _flight_lines(self, s: dict, lang: str, m, start: date, end: date, party: tuple[int, int, int], guests: int, hotel_total: float,
+                      price_of=None) -> list[str]:
         """The flight under a hotel: the pair that keeps most of the holiday,
         a clearly cheaper one, and nearby dates when the exact ones have no
         direct flight or only ones that burn half a day or more."""
@@ -414,7 +417,11 @@ class Engine:
         else:
             lines.append(t["vac_no_direct"].format(dest=dg.e(airport)))
         if f is None or holiday_loss(f) >= 6:
-            shifted = [(g, p) for g, p in self._shifted(s, m, start, end, party, guests) if f is None or holiday_loss(g) < holiday_loss(f) / 2]
+            if price_of is None:
+                def price_of(ci: date, co: date) -> int | None:
+                    priced = self.tracked.price(m.key, ci.isoformat(), co.isoformat(), guests, (co - ci).days)
+                    return round(priced[0]) if priced else None
+            shifted = [(g, p) for g, p in self._shifted(s, m, start, end, party, price_of) if f is None or holiday_loss(g) < holiday_loss(f) / 2]
             if shifted:
                 lines.append(t["vac_shift_head"])
             for g, priced in shifted:
@@ -423,29 +430,64 @@ class Engine:
                 line = t["vac_shift"].format(url=dg.e(kiwi_url(g)), a=dg.e(dg.day(lang, ci)), b=dg.e(dg.day(lang, co)), n=f"{n} {dg.plural(lang, n)}",
                                              air=dg.e(g.airlines), o=dg.e(f"{g.depart:%H:%M}"), r=dg.e(f"{g.ret_depart:%H:%M}"), p=round(g.price))
                 if priced:
-                    delta = round(priced[0] - hotel_total)
-                    line += t["vac_shift_hotel"].format(h=priced[0], d=(f"+{delta}" if delta > 0 else str(delta)), t=round(priced[0] + g.price))
+                    delta = round(priced - hotel_total)
+                    line += t["vac_shift_hotel"].format(h=priced, d=(f"+{delta}" if delta > 0 else str(delta)), t=round(priced + g.price))
                 else:
                     line += t["vac_shift_noprice"]
                 lines.append(line)
         return lines
 
+    def _holiday_price(self, key: str, ref: tuple[str, str] | None, lang: str, v: dict, ci: date, co: date, adults: int, ages: tuple[int, ...]
+              ) -> tuple[tuple[float, str, float | None] | None, Offer | None, int | None]:
+        """(the TripAdvisor price, the Stayforlong rate, the price the total
+        is counted with). With free cancellation or paying later asked for,
+        the total takes the Stayforlong rate that meets it: TripAdvisor does
+        not say how its prices are paid."""
+        priced = self.tracked.price(key, ci.isoformat(), co.isoformat(), adults + len(ages), (co - ci).days) if key else None
+        offer = self.sfl.best(ref[0], ref[1], lang, ci.isoformat(), co.isoformat(), adults, ages, all_inclusive=v["suggest"]["all_inclusive"],
+                              free_cancellation=v.get("free_cancellation", False), pay_later=v.get("pay_later", False)) if ref else None
+        strict = v.get("free_cancellation") or v.get("pay_later")
+        totals = ([offer.total] if offer else []) + ([round(priced[0])] if priced and not (strict and offer) else [])
+        return priced, offer, (min(totals) if totals else None)
+
+    def _price_of(self, key: str, ref: tuple[str, str] | None, lang: str, v: dict, adults: int, ages: tuple[int, ...]):
+        """The hotel's price for other dates, for the nearby flights."""
+        return lambda ci, co: self._holiday_price(key, ref, lang, v, ci, co, adults, ages)[2]
+
+    def _offer_lines(self, lang: str, v: dict, ref: tuple[str, str] | None, offer: Offer | None) -> list[str]:
+        """The Stayforlong rate under a hotel: its total, board and how it is
+        paid, or why there is none when conditions were asked for."""
+        t = dg.TX[lang]
+        if offer is None:
+            if ref and (v.get("free_cancellation") or v.get("pay_later")):
+                return [t["vac_sfl_none"]]
+            return []
+        board = t["all_inclusive"] if offer.board in ALL_INCLUSIVE else t.get(f"board_{offer.board.lower()}", "")
+        until = dg.e(f"{date.fromisoformat(offer.until):%d.%m}") if offer.until else ""
+        if offer.free_cancellation:
+            terms = t["vac_sfl_free"].format(d=until) if until else t["vac_sfl_free_open"]
+        elif offer.pay_later:
+            terms = t["vac_sfl_deposit"].format(n=offer.pay_now, d=until) if until else t["vac_sfl_deposit_open"].format(n=offer.pay_now)
+        else:
+            terms = t["vac_sfl_now"]
+        return [t["vac_sfl"].format(url=dg.e(offer.url), p=offer.total, board=dg.e(f", {board}" if board else ""), terms=terms)]
+
     def _suggestions(self, s: dict, lang: str, start: date, end: date, party: tuple[int, int, int], ages: tuple[int, ...], ex: Exclusions) -> list[str]:
         """Hotels picked by the user's rules from the hotel facts: countries
         of the holiday, stars, all inclusive, water park, review score, and a
-        price for the whole stay within the limit. Cheapest first, a water
-        park counts as a tenth off. Each comes with its flight and the total."""
+        price for the whole stay within the limit, from TripAdvisor or
+        Stayforlong, whichever is lower. Cheapest first, a water park counts
+        as a tenth off. Each comes with its flight and the total."""
         v = s["blocks"]["vacation"]
         rule = v["suggest"]
         t = dg.TX[lang]
         adults = party[0]
-        guests = adults + len(ages)
         nights = (end - start).days
         countries = {c.lower() for c in v["countries"]}
         tracked = set(v["hotels"])
         picked = []
         for h in hotel_facts():
-            if h["cc"] not in countries or h["url"] in tracked or not h.get("ta"):
+            if h["cc"] not in countries or h["url"] in tracked or not (h.get("ta") or h.get("sfl")):
                 continue
             if (h.get("stars") or 0) < rule["min_stars"] or (h.get("score") or 0) < rule["min_rating"] or (h.get("reviews") or 0) < MIN_SUGGEST_REVIEWS:
                 continue
@@ -453,24 +495,27 @@ class Engine:
                 continue
             if ex.hits(h["name"]) or ex.hits(h.get("city", "")):
                 continue
-            priced = self.tracked.price(h["ta"], start.isoformat(), end.isoformat(), guests, nights)
-            if priced is None or priced[0] > rule["max_hotel_eur"]:
+            ref = tuple(h["sfl"].split(":", 1)) if h.get("sfl") else None
+            priced, offer, total = self._holiday_price(h.get("ta", ""), ref, lang, v, start, end, adults, ages)
+            if total is None or total > rule["max_hotel_eur"]:
                 continue
-            picked.append((priced[0] * (0.9 if has_aquapark(h) else 1.0), h, priced))
+            picked.append((total * (0.9 if has_aquapark(h) else 1.0), h, ref, priced, offer, total))
         picked.sort(key=lambda x: x[0])
         if not picked:
             return [t["vac_suggest_none"]]
         booking_q = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
         lines = [t["vac_suggest_head"]]
-        for _, h, (total, source, booking_total) in picked[:MAX_SUGGEST]:
+        for _, h, ref, priced, offer, total in picked[:MAX_SUGGEST]:
             marks = [f"{h['stars']}★"] + ([t["aquapark"]] if has_aquapark(h) else []) + ([t["all_inclusive"]] if h.get("ai") else [])
             line = t["vac_suggest"].format(url=dg.e(h["url"] + booking_q), name=dg.e(h["name"]), city=dg.e(h.get("city", "")),
-                                           marks=dg.e(" · ".join(marks)), score=h["score"], reviews=h["reviews"],
-                                           p=total, n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(source))
-            if booking_total:
-                line += t["vac_booking"].format(p=booking_total)
-            m = Match(url=h["url"], status="found", key=h["ta"], name=h["name"], lat=h["lat"], lon=h["lon"])
-            group = [line, *self._flight_lines(s, lang, m, start, end, party, guests, total)]
+                                           marks=dg.e(" · ".join(marks)), score=h["score"], reviews=h["reviews"])
+            if priced:
+                line += t["vac_price"].format(p=priced[0], n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(priced[1]))
+                if priced[2]:
+                    line += t["vac_booking"].format(p=priced[2])
+            m = Match(url=h["url"], status="found", key=h.get("ta", ""), name=h["name"], lat=h["lat"], lon=h["lon"])
+            group = [line, *self._offer_lines(lang, v, ref, offer),
+                     *self._flight_lines(s, lang, m, start, end, party, adults + len(ages), total, self._price_of(h.get("ta", ""), ref, lang, v, adults, ages))]
             if len("\n".join(lines + group)) > MESSAGE_ROOM:  # whole hotels only, never a cut tag
                 break
             lines += group
@@ -506,36 +551,41 @@ class Engine:
             booking_q = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
             for m in matches:
                 link = dg.e(m.url + booking_q)
-                if m.status != "found":
+                country = m.url.split("/hotel/", 1)[-1][:2]
+                slug = m.url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ").title()
+                name = m.name if m.status == "found" else (v["hotel_names"].get(m.url) or slug)
+                ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or name, m.lat, m.lon, country)
+                priced, offer, total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, start, end, adults, ages)
+                rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews) if m.status == "found" else ""
+                if total is None:
                     if not full:
                         continue
-                    slug = m.url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ").title()
-                    lines.append(t["vac_hotel_unknown"].format(url=link, name=dg.e(slug)))
+                    if m.status != "found":
+                        lines.append(t["vac_hotel_unknown"].format(url=link, name=dg.e(slug)))
+                    else:
+                        lines.append(t["vac_hotel_noprice"].format(url=link, name=dg.e(m.name), rating=dg.e(rating)))
                     continue
-                priced = self.tracked.price(m.key, start.isoformat(), end.isoformat(), guests, nights)
-                rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews)
-                if priced is None:
-                    if not full:
-                        continue
-                    lines.append(t["vac_hotel_noprice"].format(url=link, name=dg.e(m.name), rating=dg.e(rating)))
-                    continue
-                total, source, booking_total = priced
-                key = f"vac:{m.key}:{start}:{end}:{guests}"
+                price_key = m.key if m.status == "found" else f"sfl{ref[0] if ref else ''}"
+                key = f"vac:{price_key}:{start}:{end}:{guests}"
                 prev = sent.get(key)
                 if not full and prev is not None and abs(total - prev) < prev * 0.03:
                     continue
                 sent_items.append((key, float(total)))
-                usual = self.store.usual_price(f"hotel:{m.key}:{guests}", f"{start}:{end}")
-                self.store.record_price(f"hotel:{m.key}:{guests}", f"{start}:{end}", today.isoformat(), total)
-                line = t["vac_hotel"].format(url=link, name=dg.e(m.name), rating=dg.e(rating), p=total, n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(source))
-                if booking_total:
-                    line += t["vac_booking"].format(p=booking_total)
+                usual = self.store.usual_price(f"hotel:{price_key}:{guests}", f"{start}:{end}")
+                self.store.record_price(f"hotel:{price_key}:{guests}", f"{start}:{end}", today.isoformat(), total)
+                line = f'🏨 <a href="{link}">{dg.e(name)}</a>' + (f" ({dg.e(rating)})" if rating else "")
+                if priced:
+                    line += t["vac_price"].format(p=priced[0], n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(priced[1]))
+                    if priced[2]:
+                        line += t["vac_booking"].format(p=priced[2])
                 if prev is not None and abs(total - prev) >= prev * 0.03:
                     line += t["vac_was"].format(p=round(prev))
                 elif usual and total < usual * 0.97:
                     line += t["cheaper"].format(x=round(100 * (1 - total / usual)))
                 lines.append(line)
-                lines += self._flight_lines(s, lang, m, start, end, (adults, children, infants), guests, total)
+                lines += self._offer_lines(lang, v, ref, offer)
+                lines += self._flight_lines(s, lang, m, start, end, (adults, children, infants), guests, total,
+                                            self._price_of(m.key if m.status == "found" else "", ref, lang, v, adults, ages))
             if not full:
                 if len(lines) > 1:
                     blocks.append("\n".join(lines))

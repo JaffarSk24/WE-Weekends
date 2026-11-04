@@ -72,6 +72,7 @@ GitHub Pages (web/)  ──HTTPS──>  nginx  ──>  gateway (FastAPI, SQLit
 
 - **Flights:** Kiwi.com search, direct flights only. Searches run once per departure airport and country and are shared by all users, so the cost does not grow with the number of people.
 - **Stays:** Booking.com Demand API when credentials are configured; otherwise public rates from Booking.com, Agoda and Trip.com via Xotelo; otherwise a Booking.com search link with the dates, party and filters.
+- **Stayforlong:** the price of the whole holiday stay next to the TripAdvisor ones, with the board and how it is paid (free cancellation, a deposit now, or paid at once), read from the gateway its own site uses, one hotel at a time and cached for half a day. The holiday options "free cancellation only" and "pay later only" pick from these rates. Hotels are matched by name and position (`server/weekends/engine/stayforlong.py`; ids of the suggestion hotels are added by `server/scripts/add_stayforlong_ids.py`).
 - **Hotel facts for suggestions:** official stars, all inclusive, water park and kids' facilities of resort hotels in the main beach regions, as Booking.com lists them (`server/weekends/data/hotel_facts.json`, built by `server/scripts/build_hotel_facts.py`). Prices for your dates still come from the stay sources above, daily.
 - **Weather:** Open-Meteo forecast for the next two weeks, the same dates last year further out.
 - **Data:** public holidays from `holidays`, entry rules from the passport-index dataset with EU residence waivers, destinations from Wikidata.
