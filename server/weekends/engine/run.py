@@ -578,12 +578,18 @@ class Engine:
                     line += t["vac_price"].format(p=priced[0], n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(priced[1]))
                     if priced[2]:
                         line += t["vac_booking"].format(p=priced[2])
+                change = ""
                 if prev is not None and abs(total - prev) >= prev * 0.03:
-                    line += t["vac_was"].format(p=round(prev))
+                    change = t["vac_was"].format(p=round(prev))
                 elif usual and total < usual * 0.97:
-                    line += t["cheaper"].format(x=round(100 * (1 - total / usual)))
+                    change = t["cheaper"].format(x=round(100 * (1 - total / usual)))
+                offer_lines = self._offer_lines(lang, v, ref, offer)
+                if offer and offer.total == total and offer_lines:
+                    offer_lines[-1] += change  # the change belongs to the price the total is counted with
+                else:
+                    line += change
                 lines.append(line)
-                lines += self._offer_lines(lang, v, ref, offer)
+                lines += offer_lines
                 lines += self._flight_lines(s, lang, m, start, end, (adults, children, infants), guests, total,
                                             self._price_of(m.key if m.status == "found" else "", ref, lang, v, adults, ages))
             if not full:

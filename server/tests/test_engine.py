@@ -495,3 +495,33 @@ def test_holiday_counts_the_stayforlong_price(monkeypatch):
     s["blocks"]["vacation"]["suggest"]["max_hotel_eur"] = 5000
     text = "\n".join(engine._suggestions(s, "ru", date(2027, 5, 27), date(2027, 6, 6), (2, 1, 0), (8,), Exclusions([])))
     assert "тарифов на ваших условиях" in text and "Only There" not in text  # no free cancellation: only the TripAdvisor price is left
+
+
+def test_holiday_price_change_is_marked_on_the_counted_price(env):
+    from datetime import date
+
+    from weekends.engine.stayforlong import Offer
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": [],
+                               "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
+                               "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
+    client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    engine = Engine(app.state.cfg, app.state.db, tg)
+
+    class T:
+        def resolve(self, url, alias="", geos=None):
+            from weekends.engine.tracked import Match
+            return Match(url=url, status="found", key="g1-d2", name="Lonicera", rating=4.4, reviews=10)
+
+        def price(self, *a):
+            return (3210, "Booking.com", None)
+
+    engine.tracked = T()
+    engine.sfl = OfferSfl([Offer(total=1480, board="AI", policy="SFL", pay_now=73, until="2027-05-14", url="https://www.stayforlong.com/x")])
+    key = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 4), full=False, sent={})[1][0][0]
+    blocks, items = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 4), full=False, sent={key: 3300.0})
+    hotel, sfl = blocks[0].split("\n")[2:4]
+    assert "≈3210€" in hotel and "было" not in hotel
+    assert "≈1480€" in sfl and sfl.endswith("(было 3300€)") and dict(items)[key] == 1480
