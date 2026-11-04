@@ -137,7 +137,10 @@ def party_of(s: dict, mode: str) -> tuple[int, int, int, tuple[int, ...]]:
     """(adults, children 2-11, infants, ages of everyone under 18)."""
     if mode != "family":
         return 1, 0, 0, ()
-    fam = s["budgets"]["family"]
+    return family_party(s["budgets"]["family"])
+
+
+def family_party(fam: dict) -> tuple[int, int, int, tuple[int, ...]]:
     ages = tuple(fam["children"])
     adults = fam["adults"] + sum(1 for a in ages if a >= 12)
     children = sum(1 for a in ages if 2 <= a <= 11)
@@ -530,8 +533,8 @@ class Engine:
         v = s["blocks"]["vacation"]
         t = dg.TX[lang]
         ex = Exclusions(s["geography"]["exclude_places"])
-        mode = "family" if v["party"] == "family" and s["budgets"]["family"]["enabled"] else "solo"
-        adults, children, infants, ages = party_of(s, mode)
+        mode = "family" if v["party"] == "family" else "solo"
+        adults, children, infants, ages = family_party(v.get("family") or s["budgets"]["family"]) if mode == "family" else party_of(s, mode)
         guests = adults + len(ages)
         matches = []
         for url in v["hotels"]:

@@ -149,6 +149,12 @@ class Family(Strict):
     budget_eur: Annotated[int, Field(ge=50, le=30_000)] = 500
 
 
+class Party(Strict):
+    """Who goes on the holiday: its own family, apart from family weekends."""
+    adults: Annotated[int, Field(ge=1, le=6)] = 2
+    children: Annotated[list[Annotated[int, Field(ge=0, le=17)]], Field(max_length=6)] = []
+
+
 class Budgets(Strict):
     solo: Solo = Solo()
     family: Family = Family()
@@ -285,6 +291,8 @@ class Vacation(Block):
     enabled: bool = False
     freq: Freq = "weekly"
     party: Literal["solo", "family"] = "family"
+    # Filled from the family of the budget the first time, then its own.
+    family: Party | None = None
     date_options: Annotated[list[DateRange], Field(max_length=4)] = []
     countries: Annotated[list[ISO2], Field(max_length=30), AfterValidator(_unique)] = []
     hotels: Annotated[list[BookingUrl], Field(max_length=10), AfterValidator(_unique)] = []
@@ -330,6 +338,9 @@ class UserSettings(Strict):
     def _check(self) -> UserSettings:
         if self.rating.preset != "custom":
             self.rating.weights = PRESETS[self.rating.preset].model_copy()
+        if self.blocks.vacation.family is None:
+            fam = self.budgets.family
+            self.blocks.vacation.family = Party(adults=fam.adults, children=list(fam.children))
         return self
 
 

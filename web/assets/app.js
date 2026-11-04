@@ -263,6 +263,19 @@ function numberInput(obj, key, min, max, step = 1, suffix = '') {
 }
 
 // − 2 + : for small counts, easier than typing on a phone
+// Children by age, up to six: the ages count for prices.
+function kidsEditor(list) {
+  const kids = h('div', { class: 'tags' });
+  const paint = () => kids.replaceChildren(
+    ...list.map((age, i) => h('span', { class: 'tag' },
+      h('input', { type: 'number', min: 0, max: 17, value: age, 'aria-label': t('child_age'), class: 'age', oninput: (e) => { const v = Number(e.target.value); if (v >= 0 && v <= 17) { list[i] = Math.round(v); markDirty(); } } }),
+      h('span', { class: 'muted' }, t('years')),
+      h('button', { type: 'button', 'aria-label': t('remove'), onclick: () => { list.splice(i, 1); paint(); markDirty(); } }, '×'))),
+    list.length < 6 ? h('button', { type: 'button', class: 'btn small', onclick: () => { list.push(8); paint(); markDirty(); } }, `+ ${t('add_child')}`) : '');
+  paint();
+  return kids;
+}
+
 function stepper(obj, key, min, max, label) {
   const out = h('output', { 'aria-live': 'polite' }, String(obj[key]));
   const set = (v) => { obj[key] = Math.min(max, Math.max(min, v)); out.textContent = String(obj[key]); markDirty(); };
@@ -493,14 +506,7 @@ function settingsView() {
   // 3. Budget and stay
   const fam = s.budgets.family;
   const familyBox = h('div', { class: 'sub', hidden: !fam.enabled });
-  const kids = h('div', { class: 'tags' });
-  const paintKids = () => kids.replaceChildren(
-    ...fam.children.map((age, i) => h('span', { class: 'tag' },
-      h('input', { type: 'number', min: 0, max: 17, value: age, 'aria-label': t('child_age'), class: 'age', oninput: (e) => { const v = Number(e.target.value); if (v >= 0 && v <= 17) { fam.children[i] = Math.round(v); markDirty(); } } }),
-      h('span', { class: 'muted' }, t('years')),
-      h('button', { type: 'button', 'aria-label': t('remove'), onclick: () => { fam.children.splice(i, 1); paintKids(); markDirty(); } }, '×'))),
-    fam.children.length < 6 ? h('button', { type: 'button', class: 'btn small', onclick: () => { fam.children.push(8); paintKids(); markDirty(); } }, `+ ${t('add_child')}`) : '');
-  paintKids();
+  const kids = kidsEditor(fam.children);
   familyBox.append(
     h('div', { class: 'two' }, group(t('adults'), stepper(fam, 'adults', 1, 4, t('adults'))), field(t('family_budget'), numberInput(fam, 'budget_eur', 50, 30000, 1, '€'))),
     group(t('children'), kids));
@@ -578,6 +584,12 @@ function settingsView() {
   paintHotels();
   refreshHotels(paintHotels);
   hotelsRefresh = () => refreshHotels(paintHotels);
+  // The holiday has its own family, apart from family weekends.
+  const vfam = vac.family || (vac.family = { adults: fam.adults, children: [...fam.children] });
+  const vacFamily = h('div', { class: 'sub', hidden: vac.party !== 'family' },
+    group(t('adults'), stepper(vfam, 'adults', 1, 6, t('adults'))),
+    group(t('children'), kidsEditor(vfam.children)),
+    h('p', { class: 'hint' }, t('vac_family_hint')));
   const sug = vac.suggest;
   const sugBox = h('div', { class: 'sub', hidden: !sug.enabled },
     h('div', { class: 'two' },
@@ -592,7 +604,7 @@ function settingsView() {
       feed('diamonds', '💎', field(t('max_price'), numberInput(s.blocks.diamonds, 'max_price_eur', 10, 300, 1, '€'))),
       feed('wow', '🔥', field(t('max_ppn'), numberInput(s.blocks.wow, 'max_per_person_night', 10, 500, 1, '€'))),
       feed('vacation', '🌴', h('div', {},
-        group(t('party'), segmented(vac, 'party', [['solo', t('solo')], ['family', t('family')]])),
+        group(t('party'), segmented(vac, 'party', [['solo', t('solo')], ['family', t('family')]], () => { vacFamily.hidden = vac.party !== 'family'; })), vacFamily,
         group(t('dates'), rangeList(vac.date_options, 4, false)),
         group(t('vac_countries'), countryPicker(vac.countries, 30)),
         group(t('hotels'), hotels),

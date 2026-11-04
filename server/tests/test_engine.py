@@ -549,3 +549,34 @@ def test_stayforlong_asks_for_no_children_and_keeps_no_odd_answer(tmp_path, monk
     assert odd.offers("1", "2027-05-27", "2027-06-06", 1, ()) == []
     with odd.db.tx() as con:
         assert con.execute("SELECT COUNT(*) FROM sfl_cache").fetchone()[0] == 0
+
+
+def test_holiday_has_its_own_family(env):
+    from datetime import date
+
+    from weekends.models import UserSettings
+    old = UserSettings.model_validate({"budgets": {"family": {"enabled": False, "adults": 2, "children": [8]}}})
+    assert old.blocks.vacation.family.adults == 2 and old.blocks.vacation.family.children == [8]  # taken over once
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["budgets"]["family"] = {**s["budgets"]["family"], "enabled": False, "adults": 1, "children": []}
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "party": "family", "family": {"adults": 3, "children": [8, 1]},
+                               "countries": [], "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
+                               "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
+    assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 200
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    asked = []
+
+    class T:
+        def resolve(self, url, alias="", geos=None):
+            from weekends.engine.tracked import Match
+            return Match(url=url, status="found", key="g1-d2", name="Lonicera", rating=4.4, reviews=10)
+
+        def price(self, key, checkin, checkout, guests, nights):
+            asked.append(guests)
+            return (3000, "Booking.com", None)
+
+    engine.tracked = T()
+    blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 5), full=False, sent={})
+    assert "3 взр. + 2 реб." in blocks[0] and asked == [5]  # its own family, family weekends off
