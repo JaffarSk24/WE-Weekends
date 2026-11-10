@@ -26,6 +26,11 @@ TX = {
         "stay": "🏨 <a href=\"{url}\">{name}</a>{place} ({rating}) · {p}€ за {n}",
         "stay_rating": "TripAdvisor {r} из 5, отзывов: {c}",
         "stay_nights": {1: "ночь", 2: "ночи", 5: "ночей"},
+        "watch_flights": "⚠ WE Weekends: поиск рейсов сегодня не вернул ни одного варианта. Проверьте источник рейсов.",
+        "watch_stays": "⚠ WE Weekends: точная цена жилья нашлась только для {real} из {asked} поездок, остальные по оценке. Похоже, источник цен отелей перестал отвечать.",
+        "stay_estimate": "🏨 жильё ≈{p}€ за {n}: это обычная цена хорошего отеля в городе, точной на эти даты пока нет. <a href=\"{url}\">Варианты на Booking</a>",
+        "stay_rating_guests": "Stayforlong {r} из 10, отзывов: {c}",
+        "total_estimate": "💶 <b>Итого ≈{t}€</b> с оценкой жилья",
         "stay_none": "🏨 цену жилья не нашли: <a href=\"{url}\">варианты на Booking</a> на ваши даты",
         "transfer": "🚕 трансфер туда и обратно ~{x}€ (оценка)",
         "total": "💶 <b>Итого {t}€</b>",
@@ -84,6 +89,11 @@ TX = {
         "stay": "🏨 <a href=\"{url}\">{name}</a>{place} ({rating}) · {p}€ za {n}",
         "stay_rating": "TripAdvisor {r} z 5, recenzií: {c}",
         "stay_nights": {1: "noc", 2: "noci", 5: "nocí"},
+        "watch_flights": "⚠ WE Weekends: hľadanie letov dnes nevrátilo ani jednu možnosť. Skontrolujte zdroj letov.",
+        "watch_stays": "⚠ WE Weekends: presnú cenu ubytovania sme našli len pre {real} z {asked} ciest, ostatné sú odhad. Zdroj cien hotelov zrejme prestal odpovedať.",
+        "stay_estimate": "🏨 ubytovanie ≈{p}€ za {n}: je to bežná cena dobrého hotela v meste, presnú na tieto dni zatiaľ nemáme. <a href=\"{url}\">Možnosti na Bookingu</a>",
+        "stay_rating_guests": "Stayforlong {r} z 10, recenzií: {c}",
+        "total_estimate": "💶 <b>Spolu ≈{t}€</b> s odhadom ubytovania",
         "stay_none": "🏨 cenu ubytovania sme nenašli: <a href=\"{url}\">možnosti na Bookingu</a> na vaše dátumy",
         "transfer": "🚕 transfer tam a späť ~{x}€ (odhad)",
         "total": "💶 <b>Spolu {t}€</b>",
@@ -142,6 +152,11 @@ TX = {
         "stay": "🏨 <a href=\"{url}\">{name}</a>{place} ({rating}) · {p}€ for {n}",
         "stay_rating": "TripAdvisor {r} of 5, {c} reviews",
         "stay_nights": {1: "night", 2: "nights", 5: "nights"},
+        "watch_flights": "⚠ WE Weekends: the flight search returned nothing today. Check the flight source.",
+        "watch_stays": "⚠ WE Weekends: an exact stay price was found for only {real} of {asked} trips, the rest are estimates. The hotel price source seems to have stopped answering.",
+        "stay_estimate": "🏨 stay ≈{p}€ for {n}: the usual price of a good hotel in the city, no exact one for these dates yet. <a href=\"{url}\">Options on Booking</a>",
+        "stay_rating_guests": "Stayforlong {r} of 10, {c} reviews",
+        "total_estimate": "💶 <b>Total ≈{t}€</b> with an estimated stay",
         "stay_none": "🏨 no stay price found: <a href=\"{url}\">options on Booking</a> for your dates",
         "transfer": "🚕 transfer both ways ~{x}€ (estimate)",
         "total": "💶 <b>Total {t}€</b>",
@@ -256,8 +271,13 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
     who = t["who_family"] if c.mode == "family" else ""
     lines.append(t["flight"].format(url=e(url), air=e(it.airline or t["tickets"]), dest=e(it.dest), o=e(out), r=e(back), p=round(c.flight_price), who=who))
     if c.mode != "diamond":
-        if c.hotel_price is not None:
-            rating = t["stay_rating"].format(r=f"{(c.hotel_rating or 0) / 2:.1f}", c=c.hotel_reviews or 0)
+        if c.hotel_source == "estimate":
+            lines.append(t["stay_estimate"].format(url=e(c.hotel_url), p=round(c.hotel_price or 0), n=f"{it.nights} {plural(lang, it.nights)}"))
+        elif c.hotel_price is not None:
+            if c.hotel_source == "stayforlong":
+                rating = t["stay_rating_guests"].format(r=f"{c.hotel_rating or 0:.1f}", c=c.hotel_reviews or 0)
+            else:
+                rating = t["stay_rating"].format(r=f"{(c.hotel_rating or 0) / 2:.1f}", c=c.hotel_reviews or 0)
             place = f", {e(place_name(c.hotel_place, lang))}" if c.hotel_place else ""
             lines.append(t["stay"].format(url=e(c.hotel_url), name=e(c.hotel_name), place=place, rating=e(rating),
                                           p=round(c.hotel_price), n=f"{it.nights} {plural(lang, it.nights)}"))
@@ -272,6 +292,8 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
     who_total = party(lang, adults, kids) if c.mode == "family" else ""
     if c.mode == "diamond":
         total = t["total_diamond"].format(t=round(c.flight_price))
+    elif c.hotel_source == "estimate":
+        total = t["total_estimate"].format(t=round(c.total)) + who_total
     elif c.hotel_price is not None:
         total = t["total"].format(t=round(c.total)) + who_total
     else:

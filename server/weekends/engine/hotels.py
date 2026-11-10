@@ -5,8 +5,12 @@
 2. Xotelo (free, no key): rates on the given dates that Booking.com, Agoda,
    Trip.com and others publish through TripAdvisor, for cities with a known
    TripAdvisor location key (data/tripadvisor.json).
-3. A Booking.com search link with the dates, the party and the filters, so
-   the user sees real prices there.
+3. Stayforlong (free, no key): its hotels around the destination with the
+   total for the dates and the party, when Xotelo has no rates.
+4. An estimate from the usual nightly price of the city
+   (data/stay_baseline.json), marked as an estimate, so a trip always has a
+   total. The link is a Booking.com search with the dates, the party and the
+   filters, where the user sees the real prices.
 
 Every result keeps a direct link; nothing is ever booked by us."""
 from __future__ import annotations
@@ -15,6 +19,7 @@ import json
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
@@ -27,6 +32,7 @@ from ..db import Database
 from .places import _contains, place_of, words
 
 log = logging.getLogger("weekends.hotels")
+MAX_RATE_LOOKUPS = 6  # hotels of one city asked for rates, at the same time
 DATA = Path(__file__).resolve().parents[1] / "data"
 
 
@@ -37,7 +43,7 @@ class Stay:
     rating: float | None  # on a 10-point scale
     reviews: int | None
     url: str
-    source: str  # booking, xotelo, link
+    source: str  # booking, xotelo, stayforlong, estimate, link
     place: str | None = None  # known resort or city the hotel is in
     approx: bool = False
 
@@ -101,9 +107,31 @@ def tripadvisor_keys() -> dict[str, str]:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
+@lru_cache(maxsize=1)
+def stay_baseline() -> dict:
+    path = DATA / "stay_baseline.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+
+def estimate(q: StayQuery) -> float | None:
+    """The usual price of a good hotel room in the city for these nights: the
+    city's own nightly price for two, else the country's, else the middle of
+    all cities. A single traveller pays most of a double room, and each
+    further guest adds about a third."""
+    base = stay_baseline()
+    nightly = (base.get("cities") or {}).get(q.iata) or (base.get("countries") or {}).get(q.country.upper()) or base.get("all")
+    if not nightly:
+        return None
+    persons = q.adults + len(q.children)
+    factor = 0.85 if persons == 1 else 1 + 0.35 * max(0, persons - 2)
+    nightly = max(30.0, min(float(nightly), 350.0))  # one odd weekend must not make a city free or unaffordable
+    return round(nightly * factor * q.nights)
+
+
 class Hotels:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: Database, stayforlong=None) -> None:
         self.db = db
+        self.stayforlong = stayforlong
         self.client = httpx.Client(timeout=25.0, follow_redirects=False)
         self.booking_token = os.environ.get("BOOKING_API_TOKEN", "").strip()
         self.booking_affiliate = os.environ.get("BOOKING_AFFILIATE_ID", "").strip()
@@ -127,6 +155,15 @@ class Hotels:
                 stay = self._xotelo(q, tripadvisor_keys()[q.iata])
         except Exception:  # a broken source must never break the digest
             log.exception("stay lookup failed for %s", q.iata)
+        if stay is None and self.stayforlong is not None and q.lat is not None:
+            try:
+                stay = self.stayforlong.around(q)
+            except Exception:
+                log.exception("stayforlong lookup failed for %s", q.iata)
+        if stay is None:
+            guess = estimate(q)
+            if guess:
+                return Stay(name="", price=guess, rating=None, reviews=None, url=link, source="estimate", approx=True)
         return stay or Stay(name="", price=None, rating=None, reviews=None, url=link, source="link")
 
     # -- cache -----------------------------------------------------------
@@ -154,25 +191,35 @@ class Hotels:
             summary = h.get("review_summary") or {}
             rating = float(summary.get("rating") or 0) * 2  # TripAdvisor rates out of 5
             count = int(summary.get("count") or 0)
-            low = (h.get("price_ranges") or {}).get("minimum")
-            if rating >= q.min_rating and count >= q.min_reviews and low and h.get("accommodation_type") in ("Hotel", "Specialty lodging", "B&B", "Inn", None):
+            if rating >= q.min_rating and count >= q.min_reviews and h.get("accommodation_type") in ("Hotel", "Specialty lodging", "B&B", "Inn", None):
                 location = str(h.get("url", "")).rsplit("-Reviews-", 1)[-1].removesuffix(".html")
                 tokens = words(location.replace("-", " ").replace("_", " "))
                 if any(_contains(tokens, pattern) for pattern in q.exclude) or h.get("name", "") in q.avoid:
                     continue
-                good.append((low, rating, count, h))
-        good.sort(key=lambda x: x[0])
+                good.append((rating, count, h))
+        # The list no longer says what a hotel costs, so the first ones in its
+        # own best-value order are asked for rates, all at once: one answer
+        # takes three to seven seconds.
         persons = q.adults + len(q.children)
-        best: Stay | None = None
-        for _, rating, count, h in good[:4]:
-            def fetch_rates(h=h):
+
+        def rates_of(h: dict) -> list:
+            def fetch_rates():
                 r = self.client.get("https://data.xotelo.com/api/rates", params={
                     "hotel_key": h["key"], "chk_in": q.checkin.isoformat(), "chk_out": q.checkout.isoformat(),
                     "adults": min(persons, 4), "currency": "EUR"})
                 r.raise_for_status()
                 return (r.json().get("result") or {}).get("rates") or []
 
-            rates = self._cached(f"xr:{h['key']}:{q.checkin}:{q.checkout}:{persons}", 12 * 3600, fetch_rates)
+            try:
+                return self._cached(f"xr:{h['key']}:{q.checkin}:{q.checkout}:{persons}", 12 * 3600, fetch_rates)
+            except (httpx.HTTPError, ValueError):
+                return []
+
+        asked = good[:MAX_RATE_LOOKUPS]
+        with ThreadPoolExecutor(max_workers=MAX_RATE_LOOKUPS) as pool:
+            answers = list(pool.map(rates_of, [h for _, _, h in asked]))
+        best: Stay | None = None
+        for (rating, count, h), rates in zip(asked, answers, strict=True):
             prices = [float(x["rate"]) for x in rates if x.get("rate")]
             booking = [float(x["rate"]) for x in rates if x.get("code") == "BookingCom" and x.get("rate")]
             if not prices:

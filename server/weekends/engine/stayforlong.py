@@ -19,7 +19,7 @@ from dataclasses import dataclass
 import httpx
 
 from ..db import Database
-from .places import words
+from .places import _contains, place_of, words
 from .tracked import similarity
 
 log = logging.getLogger("weekends.stayforlong")
@@ -32,6 +32,8 @@ PAUSE = 1.0  # seconds between live requests
 PRICES_TTL = 12 * 3600
 RECHECK_NOT_FOUND = 7 * 86400
 ALL_INCLUSIVE = {"AI", "AS", "UAI"}
+AROUND_LAT, AROUND_LON = 0.13, 0.2  # about 15 km each way around a city
+MIN_REVIEWS = 30
 
 
 @dataclass(frozen=True)
@@ -180,3 +182,48 @@ class Stayforlong:
             offers = [o for o in offers if o.board in ALL_INCLUSIVE]
         offers = [o for o in offers if (not free_cancellation or o.free_cancellation) and (not pay_later or o.pay_later)]
         return min(offers, key=lambda o: o.total) if offers else None
+
+    # -- hotels around a city ----------------------------------------------
+    def around(self, q):
+        """The cheapest hotel around the destination that meets the user's
+        stay rules, for a weekend trip: one search of the box around the
+        city, cheapest first. Hostels and dormitory beds are left out."""
+        from .hotels import Stay
+        key = f"sfa:{q.iata}:{q.checkin}:{q.checkout}:{q.adults}:{','.join(map(str, q.children))}:{q.min_rating}:{q.min_stars}"
+        with self.db.tx() as con:
+            row = con.execute("SELECT body, fetched_at FROM sfl_cache WHERE key = ?", (key,)).fetchone()
+        if row and time.time() - row["fetched_at"] < PRICES_TTL:
+            found = json.loads(row["body"])
+        else:
+            body = {"affiliate": "stayforlong", "source": "web", "offer_type": "multi-offer", "device": "desktop",
+                    "checkin": q.checkin.isoformat(), "checkout": q.checkout.isoformat(), "lang": "en", "market": "sk", "currency": "EUR",
+                    "rooms": [{"adults": q.adults, "children": list(q.children)}], "sortBy": "price", "page": 0, "offset": 0,
+                    "latitude": q.lat, "longitude": q.lon, "accommodations": ["HOTEL"],
+                    "box_shape": {"top_left": {"lon": q.lon - AROUND_LON, "lat": q.lat + AROUND_LAT},
+                                  "bottom_right": {"lon": q.lon + AROUND_LON, "lat": q.lat - AROUND_LAT}}}
+            if q.min_rating >= 6:
+                body["rating"] = int(q.min_rating)
+            if q.min_stars:
+                body["stars"] = list(range(q.min_stars, 6))
+            data = self._request("POST", f"{GATEWAY}/v3/search-by-coordinates-geo", json=body)
+            if not isinstance(data, dict) or "properties" not in data:
+                return None  # not cached: tried again next time
+            found = []
+            for h in data.get("properties") or []:
+                room = ((h.get("rooms") or [{}])[0].get("room_name") or "").lower()
+                loc = h.get("property_location") or {}
+                if h.get("currency", "EUR") != "EUR" or not h.get("selling_rate") or any(w in room for w in ("dorm", "bed in", "shared")):
+                    continue
+                found.append({"name": str(h.get("name", ""))[:120], "total": round(float(h["selling_rate"])), "rating": round(float(h.get("rating") or 0), 1),
+                              "reviews": int(h.get("comments") or 0), "city": str(loc.get("city", "")),
+                              "path": hotel_path(str(loc.get("country_code", "")).lower(), str(h.get("slug", "")), str(loc.get("city_slug", "")))})
+            with self.db.tx() as con:
+                con.execute("INSERT OR REPLACE INTO sfl_cache (key, body, fetched_at) VALUES (?, ?, ?)", (key, json.dumps(found), int(time.time())))
+        need = min(q.min_reviews, MIN_REVIEWS)  # Stayforlong counts its own guests, far fewer than TripAdvisor
+        ok = [h for h in found if h["rating"] >= q.min_rating and h["reviews"] >= need and h["name"] not in q.avoid
+              and not any(_contains(words(f"{h['name']} {h['city']}"), pattern) for pattern in q.exclude)]
+        if not ok:
+            return None
+        h = min(ok, key=lambda x: x["total"])
+        return Stay(name=h["name"], price=h["total"], rating=h["rating"], reviews=h["reviews"], place=place_of(h["city"]), source="stayforlong",
+                    url=page_url(h["path"], q.lang, q.checkin.isoformat(), q.checkout.isoformat(), q.adults, q.children))

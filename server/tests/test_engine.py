@@ -580,3 +580,117 @@ def test_holiday_has_its_own_family(env):
     engine.tracked = T()
     blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 5), full=False, sent={})
     assert "3 взр. + 2 реб." in blocks[0] and asked == [5]  # its own family, family weekends off
+
+
+def stay_query(**kw):
+    from weekends.engine.hotels import StayQuery
+    base = dict(city="Naples", country="IT", iata="NAP", lat=40.85, lon=14.27, checkin=date(2026, 12, 11), checkout=date(2026, 12, 13),
+                adults=2, children=(8,), min_rating=8.0, min_reviews=100, breakfast="any", min_stars=0, lang="ru")
+    return StayQuery(**{**base, **kw})
+
+
+def test_xotelo_prices_hotels_without_a_price_hint(tmp_path):
+    import httpx
+    from conftest import REAL_XOTELO
+
+    from weekends.db import Database
+    from weekends.engine.hotels import Hotels
+    rates = {"h1": [], "h2": [{"code": "Agoda", "rate": 100}], "h3": [{"code": "BookingCom", "rate": 80}], "h4": [{"code": "Agoda", "rate": 90}],
+             "h5": [{"code": "Agoda", "rate": 10}]}
+    asked = []
+
+    def handler(request):
+        if request.url.path.endswith("/list"):  # as Xotelo answers now: no price_ranges at all
+            return httpx.Response(200, json={"result": {"list": [
+                {"key": k, "name": f"Hotel {k}", "accommodation_type": "Hotel", "review_summary": {"rating": 4.5, "count": 900},
+                 "price_ranges": None, "url": f"https://www.tripadvisor.com/Hotel_Review-g1-d1-Reviews-Hotel_{k}-Naples.html"} for k in rates]}})
+        asked.append(request.url.params["hotel_key"])
+        return httpx.Response(200, json={"result": {"rates": rates[request.url.params["hotel_key"]]}})
+
+    hotels = Hotels(Database(str(tmp_path / "h.sqlite")))
+    hotels.client = httpx.Client(transport=httpx.MockTransport(handler))
+    stay = REAL_XOTELO(hotels, stay_query(), "g1")
+    assert (stay.name, stay.price, stay.source) == ("Hotel h5", 20, "xotelo")
+    assert sorted(asked) == ["h1", "h2", "h3", "h4", "h5"]  # asked together
+
+
+def test_stay_always_gets_a_price(tmp_path, monkeypatch):
+    from weekends.db import Database
+    from weekends.engine import hotels as hm
+    from weekends.engine.hotels import Hotels, Stay
+    q = stay_query()
+
+    class Around:
+        def __init__(self, stay):
+            self.stay = stay
+
+        def around(self, q):
+            return self.stay
+
+    found = Stay(name="Sea View", price=420, rating=8.7, reviews=60, url="https://www.stayforlong.com/x", source="stayforlong")
+    assert Hotels(Database(str(tmp_path / "a.sqlite")), Around(found)).cheapest(q) is found  # Xotelo has nothing: Stayforlong
+    monkeypatch.setattr(hm, "stay_baseline", lambda: {"cities": {"NAP": 100}, "countries": {"IT": 90}, "all": 80})
+    guess = Hotels(Database(str(tmp_path / "b.sqlite")), Around(None)).cheapest(q)
+    assert (guess.source, guess.price, guess.approx) == ("estimate", 270, True) and "booking.com" in guess.url  # 100 a night, a third more for the child
+    assert hm.estimate(stay_query(iata="XXX", adults=1, children=())) == 153  # the country's price, most of a double for one
+    assert hm.estimate(stay_query(iata="XXX", country="ZZ")) == 216
+    monkeypatch.setattr(hm, "stay_baseline", lambda: {})
+    assert Hotels(Database(str(tmp_path / "c.sqlite")), Around(None)).cheapest(q).price is None
+
+
+def test_stayforlong_around_a_city(tmp_path, monkeypatch):
+    import httpx
+
+    from weekends.db import Database
+    from weekends.engine import stayforlong
+    monkeypatch.setattr(stayforlong, "PAUSE", 0)
+    asked = []
+
+    def prop(name, total, rating, comments, room="Double room"):
+        return {"name": name, "selling_rate": total, "currency": "EUR", "rating": rating, "comments": comments, "slug": name.lower().replace(" ", "-"),
+                "rooms": [{"room_name": room}], "property_location": {"city": "Naples", "city_slug": "naples", "country_code": "it"}}
+
+    def handler(request):
+        asked.append(json.loads(request.content))
+        return httpx.Response(200, json={"metadata": {}, "properties": [
+            prop("Bunk House", 60, 9.5, 500, "Bed in 10-bed dorm"), prop("Few Reviews", 150, 9.0, 5), prop("Low Score", 160, 7.0, 400),
+            prop("Old Town Kemer", 170, 9.0, 400), prop("Sea View", 420, 8.7, 60), prop("Grand", 500, 9.1, 900)]})
+
+    sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s.sqlite")), sfl_client(handler))
+    from weekends.engine.places import Exclusions
+    stay = sfl.around(stay_query(exclude=tuple(Exclusions(["kemer"]).patterns)))
+    assert (stay.name, stay.price, stay.source, stay.reviews) == ("Sea View", 420, "stayforlong", 60)
+    assert stay.url.startswith("https://www.stayforlong.com/sk-sk/hotel/it/sea-view_naples?adults=2&checkIn=2026-12-11")
+    body = asked[0]
+    assert body["rooms"] == [{"adults": 2, "children": [8]}] and body["rating"] == 8 and body["accommodations"] == ["HOTEL"]
+    assert sfl.around(stay_query(exclude=tuple(Exclusions(["kemer"]).patterns))).price == 420 and len(asked) == 1  # cached
+
+
+def test_estimated_stay_is_said_to_be_one():
+    from weekends.engine.digest import item_text
+    from weekends.engine.score import Candidate
+    it = itin("2026-12-11T18:30", "2026-12-13T22:10", price=45, dest="NAP")
+    c = Candidate(it=it, mode="solo", flight_price=45, entry="free", tags=[], workdays_lost=0, school_days_lost=0, out_slot="evening", ret_slot="evening",
+                  hotel_price=170, hotel_url="https://www.booking.com/searchresults.html?ss=Naples",
+                  hotel_source="estimate", hotel_approx=True)
+    text = item_text("ru", c, "Неаполь")
+    assert "жильё ≈170€ за 2 ночи" in text and "обычная цена" in text and "Итого ≈215€</b> с оценкой жилья" in text
+    assert "не нашли" not in text
+
+
+def test_owner_hears_when_a_source_goes_quiet(env):
+    from conftest import OWNER
+    client, tg, app = env
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    engine.pool["BTS"]["k"] = itin("2026-12-11T18:30", "2026-12-13T22:10")
+    engine.stays.update({"xotelo": 5, "estimate": 3})
+    engine._watch([(OWNER, "ru", {})], "2026-11-10")
+    assert not tg.sent  # most stays have a real price
+    engine.stays.update({"xotelo": 1, "estimate": 9})
+    engine._watch([(OWNER, "ru", {})], "2026-11-10")
+    engine._watch([(OWNER, "ru", {})], "2026-11-10")
+    assert len(tg.sent) == 1 and tg.sent[0][0] == OWNER and "только для 1 из 10" in tg.sent[0][1]  # once a day
+    engine.pool.clear()
+    engine.searched.add(("BTS", "IT"))
+    engine._watch([(OWNER, "ru", {})], "2026-11-11")
+    assert "поиск рейсов" in tg.sent[1][1]

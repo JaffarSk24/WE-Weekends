@@ -83,6 +83,7 @@ def _flight_cost(f: Itinerary) -> float:
 CHEAPER_BY = 50  # a cheaper but worse-timed flight is mentioned from this saving on
 LOST_HOUR_EUR = 20  # half a lost day (7 h) outweighs 140€
 SHIFT_DAYS = 3
+WATCH_MIN_STAYS = 6  # fewer stay lookups than this say nothing about the sources
 
 
 def holiday_loss(f: Itinerary) -> float:
@@ -154,15 +155,17 @@ class Engine:
         self.db = db
         self.tg = tg
         self.kiwi = Kiwi(db)
-        self.hotels = Hotels(db)
+        self.sfl = Stayforlong(db)
+        self.hotels = Hotels(db, self.sfl)
         self.weather = WeatherSource(db)
         self.store = Store(db)
         self.wow = WowFeed()
         self.tracked = Tracked(db)
-        self.sfl = Stayforlong(db)
         self.pool: dict[str, dict[str, Itinerary]] = defaultdict(dict)
         self.searched: set[tuple[str, str]] = set()
         self.pool_day: date | None = None
+        self.stays: dict[str, int] = defaultdict(int)  # where today's stay prices came from
+        self.warned_day = ""
 
     # ---------------------------------------------------------------- users
     def users(self) -> list[tuple[int, str, dict]]:
@@ -185,6 +188,7 @@ class Engine:
             self.pool.clear()
             self.searched.clear()
             self.pool_day = today
+            self.stays.clear()
             self.kiwi.purge()
         need: dict[tuple[str, str], dict] = {}
         for _, _, s in users:
@@ -268,6 +272,7 @@ class Engine:
                       breakfast=s["stay"]["breakfast"], min_stars=s["stay"]["min_stars"], lang=lang,
                       exclude=tuple(ex.patterns), avoid=avoid)
         stay = self.hotels.cheapest(q)
+        self.stays[stay.source] += 1
         c.hotel_price, c.hotel_name, c.hotel_rating, c.hotel_reviews = stay.price, stay.name, stay.rating, stay.reviews
         c.hotel_url, c.hotel_source, c.hotel_approx, c.hotel_place = stay.url, stay.source, stay.approx, stay.place
 
@@ -333,6 +338,8 @@ class Engine:
                 c.penalty = score(c, s, budget, ratings)
                 if c.hotel_price is None:
                     c.penalty += 30  # a trip with a known total beats one without
+                elif c.hotel_source == "estimate":
+                    c.penalty += 8  # and a real price beats an estimate
             seen_dest.add(c.it.dest)
             chosen.append(c)
         chosen.sort(key=lambda c: (c.penalty, c.total))
@@ -715,7 +722,29 @@ class Engine:
                 log.exception("digest failed for one user")
                 continue
             self.store.mark_digest(chat_id, day, items)
+        self._watch(users, day)
         log.info("tick done: users=%d kiwi_calls=%d hotel_calls=%d", len(users), self.kiwi.calls, self.hotels.calls)
+
+    def _watch(self, users: list[tuple[int, str, dict]], day: str) -> None:
+        """Tell the owner, once a day, when the sources stop answering: no
+        flights at all, or most stays priced by estimate only. A source that
+        changes its answers raises no error, so nothing else would show it."""
+        owner = self.cfg.owner_chat_id
+        if not owner or self.warned_day == day:
+            return
+        lang = next((lang for chat_id, lang, _ in users if chat_id == owner), "en")
+        t = dg.TX[lang]
+        asked = sum(self.stays.values())
+        real = asked - self.stays["estimate"] - self.stays["link"]
+        text = ""
+        if self.searched and not any(self.pool.values()):
+            text = t["watch_flights"]
+        elif asked >= WATCH_MIN_STAYS and real * 2 < asked:
+            text = t["watch_stays"].format(real=real, asked=asked)
+        if text:
+            self.warned_day = day
+            log.warning("sources: flights=%d stays=%s", sum(len(v) for v in self.pool.values()), dict(self.stays))
+            self.tg.send(owner, text)
 
     def _ever_sent(self, chat_id: int) -> bool:
         with self.db.tx() as con:

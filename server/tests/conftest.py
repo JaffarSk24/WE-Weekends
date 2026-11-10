@@ -39,11 +39,22 @@ class NoStayforlong:
     def best(self, *a, **kw):
         return None
 
+    def around(self, *a, **kw):
+        return None
+
+
+from weekends.engine.hotels import Hotels  # noqa: E402
+
+REAL_XOTELO = Hotels._xotelo
+
 
 @pytest.fixture(autouse=True)
 def no_stayforlong(monkeypatch):
+    """No test reaches a price source over the network; the ones about a
+    source bring their own transport."""
     from weekends.engine import run
     monkeypatch.setattr(run, "Stayforlong", NoStayforlong)
+    monkeypatch.setattr(Hotels, "_xotelo", lambda self, q, location: None)
 
 
 @pytest.fixture
