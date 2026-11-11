@@ -120,7 +120,7 @@ class Bot:
         chat_id = chat["id"]
         if not isinstance(data, str) or not self.limiter.allow("chat", str(chat_id)):
             return
-        if not data.startswith("r:"):
+        if not data.startswith(("r:", "t:")):
             self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64])
         lang = self._lang(chat_id, sender)
         message_id = message.get("message_id")
@@ -138,11 +138,42 @@ class Bot:
                 aspect = self.store.button_aspect(parts[1], chat_id)
                 if aspect:
                     self._rate(query, chat_id, lang, data, parts[1], aspect, int(parts[2]))
+        elif data.startswith("t:") and re.fullmatch(r"t:[0-9a-f]{12}", data):
+            self._track(query, chat_id, lang, data)
         elif data in ("lang:ru", "lang:sk", "lang:en"):
             new = data[5:]
             self.users.set_lang(chat_id, new)
             self._edit(chat_id, message_id, t(new, "language_set"))
             self._menu_button(chat_id, new)
+
+    def _track(self, query: dict, chat_id: int, lang: str, data: str) -> None:
+        """The button under a suggested hotel: the hotel joins the tracked
+        ones, and the button says so."""
+        aspect = self.store.button_aspect(data[2:], chat_id) or ""
+        answer = "track_gone"
+        if aspect.startswith("track:"):
+            try:
+                answer = "track_" + self.users.track_hotel(chat_id, aspect[6:])
+            except ValueError:  # the address no longer passes the checks
+                answer = "track_gone"
+        self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64], text=t(lang, answer), show_alert=answer == "track_full")
+        if answer not in ("track_added", "track_known"):
+            return
+        message = query.get("message") or {}
+        rows = ((message.get("reply_markup") or {}).get("inline_keyboard")) or []
+        new_rows = []
+        for row in rows:
+            new_row = []
+            for b in row:
+                if isinstance(b, dict) and "callback_data" in b:
+                    text = str(b.get("text", ""))
+                    if b["callback_data"] == data and not text.startswith(CHECK):
+                        text = CHECK + text.removeprefix("➕ ")
+                    new_row.append({"text": text[:64], "callback_data": str(b["callback_data"])})
+            if new_row:
+                new_rows.append(new_row)
+        if isinstance(message.get("message_id"), int) and new_rows:
+            self.tg.call("editMessageReplyMarkup", chat_id=chat_id, message_id=message["message_id"], reply_markup={"inline_keyboard": new_rows})
 
     def _rate(self, query: dict, chat_id: int, lang: str, data: str, button_id: str, aspect: str, value: int) -> None:
         """A press marks the button with ✓ and a second press takes the mark

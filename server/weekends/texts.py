@@ -38,6 +38,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "language_set": "Язык: русский.",
         "rated": "Учтено: такие варианты будут выше или ниже в подборке.",
         "unrated": "Отметка снята.",
+        "track_added": "Добавлен в отслеживаемые: цены будут приходить вместе с вашими отелями.",
+        "track_known": "Этот отель уже отслеживается.",
+        "track_full": "Отслеживать можно не больше 10 отелей. Уберите лишний в настройках.",
+        "track_gone": "Не получилось добавить отель. Добавьте его ссылкой в настройках.",
+        "track_missing": "Сначала сохраните настройки на сайте.",
     },
     "sk": {
         "welcome": (
@@ -74,6 +79,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "language_set": "Jazyk: slovenčina.",
         "rated": "Zaznamenané: podobné možnosti budú vo výbere vyššie alebo nižšie.",
         "unrated": "Označenie zrušené.",
+        "track_added": "Pridané medzi sledované: ceny budú chodiť spolu s vašimi hotelmi.",
+        "track_known": "Tento hotel už sledujete.",
+        "track_full": "Sledovať možno najviac 10 hotelov. Jeden odstráňte v nastaveniach.",
+        "track_gone": "Hotel sa nepodarilo pridať. Pridajte ho odkazom v nastaveniach.",
+        "track_missing": "Najprv uložte nastavenia na stránke.",
     },
     "en": {
         "welcome": (
@@ -110,6 +120,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "language_set": "Language: English.",
         "rated": "Noted: options like this will rank higher or lower.",
         "unrated": "Mark removed.",
+        "track_added": "Added to your tracked hotels: its prices will come with theirs.",
+        "track_known": "You already track this hotel.",
+        "track_full": "No more than 10 hotels can be tracked. Remove one in the settings.",
+        "track_gone": "The hotel could not be added. Add it by its link in the settings.",
+        "track_missing": "Save your settings on the site first.",
     },
 }
 

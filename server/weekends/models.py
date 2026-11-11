@@ -303,10 +303,16 @@ class Vacation(Block):
     # Kept to on Stayforlong, the one source that says how a rate is paid.
     free_cancellation: bool = False
     pay_later: bool = False
+    # Per tracked hotel: between full summaries, write only once the price is at or under this.
+    price_alerts: Annotated[dict[str, Annotated[int, Field(ge=50, le=50_000)]], Field(max_length=10)] = {}
+    # The dates as a period to find the cheapest stay of flex_nights in, instead of exact dates.
+    flexible: bool = False
+    flex_nights: Annotated[int, Field(ge=3, le=21)] = 10
 
 
 def _vacation_names(v: Vacation) -> Vacation:
     v.hotel_names = {url: name for url, name in v.hotel_names.items() if url in v.hotels and name.strip()}
+    v.price_alerts = {url: price for url, price in v.price_alerts.items() if url in v.hotels}
     return v
 
 

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS digests (
     PRIMARY KEY (chat_id, day));
 CREATE TABLE IF NOT EXISTS buttons (
     id TEXT PRIMARY KEY, chat_id INTEGER NOT NULL, aspect TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS notes (key TEXT PRIMARY KEY, value TEXT NOT NULL, at INTEGER NOT NULL);
 """
 
 ROUTE_RECHECK = 7 * 86400
@@ -90,6 +91,15 @@ class Store:
     def unrate(self, chat_id: int, aspect: str) -> None:
         with self.db.tx() as con:
             con.execute("DELETE FROM ratings WHERE chat_id = ? AND aspect = ?", (chat_id, aspect))
+
+    def note(self, key: str) -> str | None:
+        with self.db.tx() as con:
+            row = con.execute("SELECT value FROM notes WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
+
+    def set_note(self, key: str, value: str) -> None:
+        with self.db.tx() as con:
+            con.execute("INSERT OR REPLACE INTO notes VALUES (?, ?, ?)", (key, value, int(time.time())))
 
     def button(self, button_id: str, chat_id: int, aspect: str) -> None:
         with self.db.tx() as con:

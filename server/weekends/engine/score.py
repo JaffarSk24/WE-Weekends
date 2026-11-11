@@ -34,6 +34,7 @@ class Candidate:
     hotel_source: str = "link"
     hotel_approx: bool = False
     hotel_seller: str = ""
+    hotel_compare: str = ""
     transfer: float = 0.0
     weather: Weather | None = None
     usual: float | None = None

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import secrets
 import sys
 import time
@@ -29,7 +30,7 @@ from ..telegram import Telegram
 from . import digest as dg
 from .calendar import UserCalendar
 from .entry import allowed, status
-from .hotels import Hotels, StayQuery, tripadvisor_keys
+from .hotels import Hotels, StayQuery, compare_link, tripadvisor_keys
 from .kiwi import Itinerary, Kiwi, kdate
 from .places import Exclusions
 from .score import Candidate, evaluate, score
@@ -84,6 +85,7 @@ def _flight_cost(f: Itinerary) -> float:
 CHEAPER_BY = 50  # a cheaper but worse-timed flight is mentioned from this saving on
 LOST_HOUR_EUR = 20  # half a lost day (7 h) outweighs 140€
 SHIFT_DAYS = 3
+FLEX_PAIRS = 3  # date pairs of a flexible holiday priced with the hotels
 MAX_DELIVERY_TRIES = 6  # ticks, five minutes apart
 WATCH_MIN_STAYS = 6  # fewer stay lookups than this say nothing about the sources
 
@@ -151,11 +153,22 @@ def family_party(fam: dict) -> tuple[int, int, int, tuple[int, ...]]:
     return adults, children, infants, ages
 
 
+def short_name(name: str) -> str:
+    """The hotel's own name without what Booking.com appends to it, such as
+    "- Ultra All Inclusive & Private Beach"."""
+    return re.split(r"\s[-\u2013|]\s|,", name)[0].strip()
+
+
 def grown(adults: int, ages: tuple[int, ...]) -> int:
     """The real adults. Airlines seat everyone from 12 as an adult, so the
     flight party counts teenagers there; a hotel takes them as children by
     age, and counting them in both would add a guest."""
     return adults - sum(1 for a in ages if a >= 12)
+
+
+class Block(str):
+    """A message of the holiday block, with the buttons to go under it."""
+    buttons: list[list[dict]] | None = None
 
 
 class Undelivered(Exception):
@@ -294,7 +307,7 @@ class Engine:
         self.stays[stay.source] += 1
         c.hotel_price, c.hotel_name, c.hotel_rating, c.hotel_reviews = stay.price, stay.name, stay.rating, stay.reviews
         c.hotel_url, c.hotel_source, c.hotel_approx, c.hotel_place = stay.url, stay.source, stay.approx, stay.place
-        c.hotel_seller = stay.seller
+        c.hotel_seller, c.hotel_compare = stay.seller, stay.compare
 
     def _weather(self, c: Candidate) -> None:
         d = destinations().get(c.it.dest) or {}
@@ -467,6 +480,51 @@ class Engine:
                 lines.append(line)
         return lines
 
+    def _flex_dates(self, s: dict, v: dict, lang: str, matches: list, first: date, last: date, party: tuple[int, int, int], stay_adults: int,
+                    ages: tuple[int, ...], chat_id: int | None, full: bool) -> tuple[date, date] | None:
+        """The cheapest stay of the wanted length inside a period: the
+        direct flights of the period are grouped by their dates, and the
+        three cheapest date pairs are priced with the tracked hotels. The
+        choice is kept until the next full summary, so the daily price
+        messages speak of the same dates."""
+        nights = v["flex_nights"]
+        if (last - first).days < nights:
+            return None
+        kept = None if full else self.store.note(f"flex:{chat_id}:{last}:{nights}")
+        if kept:
+            a, b = (date.fromisoformat(x) for x in kept.split(":"))
+            if a > first:
+                return a, b
+        adults, children, infants = party
+        targets = [(m.url.split("/hotel/", 1)[-1][:2].upper(), self._airport(m)) for m in matches if m.status == "found" and m.lat is not None]
+        targets = list(dict.fromkeys(t for t in targets if t[1])) or [(c, c) for c in v["countries"]]
+        found: dict[str, Itinerary] = {}
+        for origin in s["profile"]["origins"]:
+            for country, to in targets:
+                for times in ({}, {"dtime_to": 11, "ret_dtime_from": 16}):
+                    for f in self.kiwi.search(country, flyFrom=origin, flyTo=to, departureDate=kdate(first), departureDateTo=kdate(last - timedelta(days=nights)),
+                                              nights_in_dst_from=nights - 1, nights_in_dst_to=nights + 1, adults=adults, children=children, infants=infants,
+                                              adults_hand_bags=[0] * adults, adults_hold_bags=[0] * adults, **times):
+                        ci, co = stay_dates(f)
+                        if first <= ci and co <= last and (co - ci).days == nights:
+                            found.setdefault(f.key, f)
+        by_dates: dict[tuple[date, date], float] = {}
+        for f in sorted(found.values(), key=_holiday_cost):
+            by_dates.setdefault(stay_dates(f), _holiday_cost(f))
+        best, best_cost = None, 0.0
+        for (ci, co), flight in sorted(by_dates.items(), key=lambda kv: kv[1])[:FLEX_PAIRS]:
+            cost = flight
+            for m in matches:
+                country = m.url.split("/hotel/", 1)[-1][:2]
+                ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or m.name, m.lat, m.lon, country)
+                total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, ci, co, stay_adults, ages)[2]
+                cost += total if total is not None else 0
+            if best is None or cost < best_cost:
+                best, best_cost = (ci, co), cost
+        if best:
+            self.store.set_note(f"flex:{chat_id}:{last}:{nights}", f"{best[0]}:{best[1]}")
+        return best
+
     def _holiday_price(self, key: str, ref: tuple[str, str] | None, lang: str, v: dict, ci: date, co: date, adults: int, ages: tuple[int, ...]
               ) -> tuple[tuple[float, str, float | None] | None, Offer | None, int | None]:
         """(the TripAdvisor price, the Stayforlong rate, the price the total
@@ -502,7 +560,8 @@ class Engine:
             terms = t["vac_sfl_now"]
         return [t["vac_sfl"].format(url=dg.e(offer.url), p=offer.total, board=dg.e(f", {board}" if board else ""), terms=terms)]
 
-    def _suggestions(self, s: dict, lang: str, start: date, end: date, party: tuple[int, int, int], ages: tuple[int, ...], ex: Exclusions) -> list[str]:
+    def _suggestions(self, s: dict, lang: str, start: date, end: date, party: tuple[int, int, int], ages: tuple[int, ...], ex: Exclusions,
+                     shown: list[tuple[str, str]] | None = None) -> list[str]:
         """Hotels picked by the user's rules from the hotel facts: countries
         of the holiday, stars, all inclusive, water park, review score, and a
         price for the whole stay within the limit, from TripAdvisor or
@@ -543,18 +602,24 @@ class Engine:
                 line += t["vac_price"].format(p=priced[0], n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(priced[1]))
                 if priced[2]:
                     line += t["vac_booking"].format(p=priced[2])
+            line += t["compare"].format(url=dg.e(compare_link(short_name(h["name"]), h.get("city", ""), start, end, adults, ages, lang)))
             m = Match(url=h["url"], status="found", key=h.get("ta", ""), name=h["name"], lat=h["lat"], lon=h["lon"])
             group = [line, *self._offer_lines(lang, v, ref, offer),
                      *self._flight_lines(s, lang, m, start, end, party, adults + len(ages), total, self._price_of(h.get("ta", ""), ref, lang, v, adults, ages))]
             if len("\n".join(lines + group)) > MESSAGE_ROOM:  # whole hotels only, never a cut tag
                 break
             lines += group
+            if shown is not None:
+                shown.append((h["name"], h["url"]))
         return lines
 
-    def vacation(self, s: dict, lang: str, today: date, full: bool = True, sent: dict[str, float] | None = None) -> tuple[list[str], list[tuple[str, float]]]:
+    def vacation(self, s: dict, lang: str, today: date, full: bool = True, sent: dict[str, float] | None = None,
+                 chat_id: int | None = None) -> tuple[list[str], list[tuple[str, float]]]:
         """The holiday block. full: everything (on the user's day). Otherwise
         only tracked hotels whose price moved by 3% or more since it was last
-        sent, or that were never sent, so a price change is never missed."""
+        sent, or that were never sent, so a price change is never missed. A
+        hotel with a price alert keeps quiet until its price is at or under
+        it. With a chat, suggested hotels get a button to track them."""
         sent = sent or {}
         sent_items: list[tuple[str, float]] = []
         v = s["blocks"]["vacation"]
@@ -569,16 +634,34 @@ class Engine:
             if ex.hits(url.rsplit("/", 1)[-1].replace("-", " ")):
                 continue
             country = url.split("/hotel/", 1)[-1][:2]
-            matches.append(self.tracked.resolve(url, v["hotel_names"].get(url, ""), self._geos_for(country)))
+            m = self.tracked.resolve(url, v["hotel_names"].get(url, ""), self._geos_for(country))
+            if m.status != "found":  # a hotel taken over from the suggestions is known by its facts
+                fact = next((h for h in hotel_facts() if h["url"] == url and h.get("ta")), None)
+                if fact:
+                    m = Match(url=url, status="found", key=fact["ta"], name=fact["name"], lat=fact["lat"], lon=fact["lon"])
+            matches.append(m)
         blocks = []
         for opt in v["date_options"]:
             start, end = date.fromisoformat(opt["start"]), date.fromisoformat(opt["end"])
+            period = ""
+            if v.get("flexible") and (end - start).days > v["flex_nights"]:
+                # the dates are a period: the cheapest stay of the wanted length inside it
+                period = t["vac_flex"].format(n=f"{v['flex_nights']} {dg.plural(lang, v['flex_nights'])}", a=dg.day(lang, start), b=dg.day(lang, end))
+                best = self._flex_dates(s, v, lang, matches, max(start, today + timedelta(days=2)), end, (adults, children, infants), stay_adults, ages,
+                                        chat_id, full)
+                if best is None:
+                    if full:
+                        blocks.append(f"🌴 <b>{dg.e(t['vacation'])}</b>\n{dg.e(period)}\n{dg.e(t['vac_flex_none'])}")
+                    continue
+                start, end = best
             if start <= today:
                 continue
             nights = (end - start).days
             who = (t["family"] + dg.party(lang, stay_adults, len(ages))) if mode == "family" else t["solo"]
             title = f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"
             lines = [title if full else f"{title}\n<i>{dg.e(t['vac_changed'])}</i>"]
+            if period:
+                lines.append(f"<i>{dg.e(period)}</i>")
             booking_q = f"?checkin={start}&checkout={end}&group_adults={stay_adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
             for m in matches:
                 link = dg.e(m.url + booking_q)
@@ -605,8 +688,13 @@ class Engine:
                 price_key = m.key if m.status == "found" else f"sfl{ref[0] if ref else ''}"
                 key = f"vac:{price_key}:{start}:{end}:{guests}"
                 prev = sent.get(key)
-                if not full and prev is not None and abs(total - prev) < prev * 0.03:
-                    continue
+                alert = (v.get("price_alerts") or {}).get(m.url)
+                if not full:
+                    moved = prev is None or abs(total - prev) >= prev * 0.03
+                    if alert and (total > alert or (prev is not None and prev <= alert and not moved)):
+                        continue  # over the wanted price, or under it as already said
+                    if not alert and not moved:
+                        continue
                 sent_items.append((key, float(total)))
                 usual = self.store.usual_price(f"hotel:{price_key}:{guests}", f"{start}:{end}")
                 self.store.record_price(f"hotel:{price_key}:{guests}", f"{start}:{end}", today.isoformat(), total)
@@ -615,11 +703,14 @@ class Engine:
                     line += t["vac_price"].format(p=priced[0], n=f"{nights} {dg.plural(lang, nights)}", src=dg.e(priced[1]))
                     if priced[2]:
                         line += t["vac_booking"].format(p=priced[2])
+                line += t["compare"].format(url=dg.e(compare_link(short_name(name), "", start, end, stay_adults, ages, lang)))
                 change = ""
+                if alert and total <= alert:
+                    change = t["vac_alert"].format(p=alert)
                 if prev is not None and abs(total - prev) >= prev * 0.03:
-                    change = t["vac_was"].format(p=round(prev))
+                    change += t["vac_was"].format(p=round(prev))
                 elif usual and total < usual * 0.97:
-                    change = t["cheaper"].format(x=round(100 * (1 - total / usual)))
+                    change += t["cheaper"].format(x=round(100 * (1 - total / usual)))
                 offer_lines = self._offer_lines(lang, v, ref, offer)
                 if offer and offer.total == total and offer_lines:
                     offer_lines[-1] += change  # the change belongs to the price the total is counted with
@@ -656,7 +747,15 @@ class Engine:
                 lines.append(t["vac_no_flights"])
             blocks.append("\n".join(lines))
             if v["suggest"]["enabled"]:  # a message of its own, it is long with the flights
-                blocks.append("\n".join([title] + self._suggestions(s, lang, start, end, (adults, children, infants), ages, ex)))
+                shown: list[tuple[str, str]] = []
+                block = Block("\n".join([title] + self._suggestions(s, lang, start, end, (adults, children, infants), ages, ex, shown)))
+                if chat_id is not None and shown:
+                    block.buttons = []
+                    for name, url in shown:  # one button a hotel: it joins the tracked ones
+                        button_id = secrets.token_hex(6)
+                        self.store.button(button_id, chat_id, f"track:{url}")
+                        block.buttons.append([{"text": f"➕ {short_name(name)}"[:60], "callback_data": f"t:{button_id}"}])
+                blocks.append(block)
         return blocks, sent_items
 
     def build(self, chat_id: int, lang: str, s: dict, today: date, first: bool) -> tuple[list[tuple[str, list[list[dict]] | None]], list[tuple[str, float]]]:
@@ -705,9 +804,10 @@ class Engine:
                 messages += [(part, None) for part in dg.pieces("\n\n".join(lines))]
         if s["blocks"]["vacation"]["enabled"]:
             # the full block on its day, otherwise only hotel price changes
-            blocks, vac_items = self.vacation(s, lang, today, full="vacation" in due, sent=sent_before)
+            blocks, vac_items = self.vacation(s, lang, today, full="vacation" in due, sent=sent_before, chat_id=chat_id)
             for block in blocks:
-                messages += [(part, None) for part in dg.pieces(block)]
+                parts = dg.pieces(block)
+                messages += [(part, None) for part in parts[:-1]] + [(parts[-1], getattr(block, "buttons", None))]
             sent_items += vac_items
         return messages, sent_items
 

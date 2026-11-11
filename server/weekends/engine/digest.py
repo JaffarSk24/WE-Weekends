@@ -30,6 +30,10 @@ TX = {
         "watch_flights": "⚠ WE Weekends: поиск рейсов сегодня не вернул ни одного варианта. Проверьте источник рейсов.",
         "watch_stays": "⚠ WE Weekends: точная цена жилья нашлась только для {real} из {asked} поездок, остальные по оценке. Похоже, источник цен отелей перестал отвечать.",
         "stay_approx": " · с детьми цена может отличаться",
+        "compare": " · <a href=\"{url}\">все продавцы</a>",
+        "vac_alert": " 🎯 не дороже вашего порога {p}€",
+        "vac_flex": "Гибкие даты: самые выгодные {n} в периоде {a} - {b}",
+        "vac_flex_none": "В этом периоде пока нет прямых рейсов на нужное число ночей.",
         "watch_holiday": "⚠ WE Weekends: ни для одного из {asked} отслеживаемых отелей отпуска сегодня не нашлось цены. Похоже, источник цен отелей перестал отвечать.",
         "stay_estimate": "🏨 жильё ≈{p}€ за {n}: это обычная цена хорошего отеля в городе, точной на эти даты пока нет. <a href=\"{url}\">Варианты на Booking</a>",
         "stay_rating_guests": "Stayforlong {r} из 10, отзывов: {c}",
@@ -96,6 +100,10 @@ TX = {
         "watch_flights": "⚠ WE Weekends: hľadanie letov dnes nevrátilo ani jednu možnosť. Skontrolujte zdroj letov.",
         "watch_stays": "⚠ WE Weekends: presnú cenu ubytovania sme našli len pre {real} z {asked} ciest, ostatné sú odhad. Zdroj cien hotelov zrejme prestal odpovedať.",
         "stay_approx": " · s deťmi sa cena môže líšiť",
+        "compare": " · <a href=\"{url}\">všetci predajcovia</a>",
+        "vac_alert": " 🎯 do vašej hranice {p}€",
+        "vac_flex": "Flexibilné dátumy: najvýhodnejších {n} v období {a} - {b}",
+        "vac_flex_none": "V tomto období zatiaľ nie sú priame lety na požadovaný počet nocí.",
         "watch_holiday": "⚠ WE Weekends: pre žiadny z {asked} sledovaných hotelov dovolenky sme dnes nenašli cenu. Zdroj cien hotelov zrejme prestal odpovedať.",
         "stay_estimate": "🏨 ubytovanie ≈{p}€ za {n}: je to bežná cena dobrého hotela v meste, presnú na tieto dni zatiaľ nemáme. <a href=\"{url}\">Možnosti na Bookingu</a>",
         "stay_rating_guests": "Stayforlong {r} z 10, recenzií: {c}",
@@ -162,6 +170,10 @@ TX = {
         "watch_flights": "⚠ WE Weekends: the flight search returned nothing today. Check the flight source.",
         "watch_stays": "⚠ WE Weekends: an exact stay price was found for only {real} of {asked} trips, the rest are estimates. The hotel price source seems to have stopped answering.",
         "stay_approx": " · may differ with children",
+        "compare": " · <a href=\"{url}\">all sellers</a>",
+        "vac_alert": " 🎯 at or under your price of {p}€",
+        "vac_flex": "Flexible dates: the best-priced {n} within {a} - {b}",
+        "vac_flex_none": "No direct flights for that many nights in this period yet.",
         "watch_holiday": "⚠ WE Weekends: none of the {asked} tracked holiday hotels got a price today. The hotel price source seems to have stopped answering.",
         "stay_estimate": "🏨 stay ≈{p}€ for {n}: the usual price of a good hotel in the city, no exact one for these dates yet. <a href=\"{url}\">Options on Booking</a>",
         "stay_rating_guests": "Stayforlong {r} of 10, {c} reviews",
@@ -315,6 +327,8 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
                 line += f", {e(c.hotel_seller)}"
             if c.hotel_approx:
                 line += t["stay_approx"]
+            if c.hotel_compare:
+                line += t["compare"].format(url=e(c.hotel_compare))
             lines.append(line)
         else:
             lines.append(t["stay_none"].format(url=e(c.hotel_url)))

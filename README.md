@@ -30,7 +30,7 @@ You tell WE Weekends where you fly from, where you would like to go, how much yo
 
 **Last-minute packages.** Headlines and prices from Slovak and Czech agencies.
 
-**Holiday.** Your own holiday dates: direct flights to the countries you chose and your tracked hotels with your dates and party already filled in. Each hotel comes with the flight pair that keeps the first and the last day, and when the exact dates have no direct flight, the nearest dates that do, with the hotel's price for them. New hotels can be suggested by your rules: stars, all inclusive, water park, review score and a price limit for the whole stay. Some suggested hotels are not on the seafront, and in Spain many have no beach of their own, so check the hotel page before you book.
+**Holiday.** Your own holiday dates: direct flights to the countries you chose and your tracked hotels with your dates and party already filled in. Each hotel comes with the flight pair that keeps the first and the last day, and when the exact dates have no direct flight, the nearest dates that do, with the hotel's price for them. New hotels can be suggested by your rules: stars, all inclusive, water park, review score and a price limit for the whole stay. Some suggested hotels are not on the seafront, and in Spain many have no beach of their own, so check the hotel page before you book. Every hotel price carries a link to all its sellers for the exact dates and party. A tracked hotel can have a price to wait for, a suggested one is tracked with a button under it, and the dates can be a period in which the cheapest stay of a given length is found.
 
 Every trip has 👍 and 👎 buttons. They only reorder future suggestions and fade out after two months; nothing is ever hidden for good.
 

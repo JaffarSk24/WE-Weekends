@@ -589,10 +589,15 @@ function settingsView() {
       else if (st.status === 'found') status.textContent = fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 });
       const alias = h('input', { type: 'text', maxlength: 100, value: vac.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
         oninput: (e) => { const v = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); if (v.trim()) vac.hotel_names[url] = v; else delete vac.hotel_names[url]; markDirty(); } });
+      // Between full summaries a hotel with a price here writes only once it costs that or less.
+      const alert = h('input', { type: 'number', min: 50, max: 50000, step: 10, inputmode: 'numeric', class: 'alert-price', value: vac.price_alerts[url] || '',
+        placeholder: t('alert_placeholder'), 'aria-label': t('alert_label'),
+        oninput: (e) => { const v = Math.round(Number(e.target.value)); if (v >= 50 && v <= 50000) vac.price_alerts[url] = v; else delete vac.price_alerts[url]; markDirty(); } });
       return h('div', { class: 'hotel-row' },
         h('span', { class: 'tag' },
           h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
-          h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { vac.hotels.splice(i, 1); delete vac.hotel_names[url]; paintHotels(); markDirty(); } }, '×')),
+          h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { vac.hotels.splice(i, 1); delete vac.hotel_names[url]; delete vac.price_alerts[url]; paintHotels(); markDirty(); } }, '×')),
+        h('label', { class: 'alert' }, t('alert_label'), alert, h('span', { class: 'muted' }, '€')),
         st && st.status === 'not_found' ? h('div', { class: 'hotel-fix' }, h('p', { class: 'hotel-status not_found' }, t('hotel_not_found')), alias) : status);
     };
     hotels.replaceChildren(
@@ -609,6 +614,10 @@ function settingsView() {
     group(t('adults'), stepper(vfam, 'adults', 1, 6, t('adults'))),
     group(t('children'), kidsEditor(vfam.children)),
     h('p', { class: 'hint' }, t('vac_family_hint')));
+  if (!vac.price_alerts) vac.price_alerts = {};
+  const flexBox = h('div', { class: 'sub', hidden: !vac.flexible },
+    group(t('flex_nights'), stepper(vac, 'flex_nights', 3, 21, t('flex_nights'))),
+    h('p', { class: 'hint' }, t('flex_hint')));
   const sug = vac.suggest;
   const sugBox = h('div', { class: 'sub', hidden: !sug.enabled },
     h('div', { class: 'two' },
@@ -625,6 +634,7 @@ function settingsView() {
       feed('vacation', '🌴', h('div', {},
         group(t('party'), segmented(vac, 'party', [['solo', t('solo')], ['family', t('family')]], () => { vacFamily.hidden = vac.party !== 'family'; })), vacFamily,
         group(t('dates'), rangeList(vac.date_options, 4, false)),
+        toggle(vac, 'flexible', t('flexible'), () => { flexBox.hidden = !vac.flexible; }), flexBox,
         group(t('vac_countries'), countryPicker(vac.countries, 30)),
         group(t('hotels'), hotels),
         toggle(vac, 'free_cancellation', t('free_cancellation')), toggle(vac, 'pay_later', t('pay_later')),

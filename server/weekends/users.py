@@ -53,6 +53,25 @@ class Users:
                 raise VersionConflict()
         return version + 1
 
+    def track_hotel(self, chat_id: int, url: str) -> str:
+        """Adds a hotel to the user's tracked ones, as the page would:
+        added, known (already there), full (ten at most) or missing."""
+        with self.db.tx() as con:
+            row = con.execute("SELECT settings FROM users WHERE chat_id = ?", (chat_id,)).fetchone()
+            if row is None or not row["settings"]:
+                return "missing"
+            settings = load_settings(row["settings"])
+            hotels = settings.blocks.vacation.hotels
+            if url in hotels:
+                return "known"
+            if len(hotels) >= 10:
+                return "full"
+            data = json.loads(settings.model_dump_json())
+            data["blocks"]["vacation"]["hotels"].append(url)
+            payload = UserSettings.model_validate(data).model_dump_json()  # the same checks a save from the page passes
+            con.execute("UPDATE users SET settings = ?, version = version + 1, updated_at = ? WHERE chat_id = ?", (payload, int(time.time()), chat_id))
+        return "added"
+
     def set_paused(self, chat_id: int, paused: bool) -> bool:
         with self.db.tx() as con:
             cur = con.execute(

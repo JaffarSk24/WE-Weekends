@@ -631,7 +631,8 @@ def test_stay_always_gets_a_price(tmp_path, monkeypatch):
             return self.stay
 
     found = Stay(name="Sea View", price=420, rating=8.7, reviews=60, url="https://www.stayforlong.com/x", source="stayforlong")
-    assert Hotels(Database(str(tmp_path / "a.sqlite")), Around(found)).cheapest(q) is found  # Xotelo has nothing: Stayforlong
+    got = Hotels(Database(str(tmp_path / "a.sqlite")), Around(found)).cheapest(q)  # Xotelo has nothing: Stayforlong
+    assert (got.name, got.price, got.source) == ("Sea View", 420, "stayforlong") and "google.com/travel/search?q=Sea+View+Naples" in got.compare
     monkeypatch.setattr(hm, "stay_baseline", lambda: {"cities": {"NAP": 100}, "countries": {"IT": 90}, "all": 80})
     guess = Hotels(Database(str(tmp_path / "b.sqlite")), Around(None)).cheapest(q)
     assert (guess.source, guess.price, guess.approx) == ("estimate", 270, True) and "booking.com" in guess.url  # 100 a night, a third more for the child
@@ -906,3 +907,122 @@ def test_family_fare_is_compared_with_the_usual_fare_for_one():
     c = Candidate(it=it, mode="family", flight_price=120, entry="free", tags=[], workdays_lost=0, school_days_lost=0, out_slot="evening",
                   ret_slot="evening", hotel_price=300, hotel_name="H", hotel_rating=8.4, hotel_reviews=300, hotel_url="https://x", usual=80)
     assert "дешевле обычного на 50%" in item_text("ru", c, "Неаполь", 2, 1) or "50%" in item_text("ru", c, "Неаполь", 2, 1)
+
+
+def test_the_lower_of_two_sources_wins_and_every_seller_is_one_link_away(tmp_path, monkeypatch):
+    from weekends.db import Database
+    from weekends.engine.hotels import Hotels, Stay, compare_link
+    # the very parameter Google Hotels made for 27.05-06.06.2027, two adults and a child of 8
+    link = compare_link("Selectum Family Resort", "Belek", date(2027, 5, 27), date(2027, 6, 6), 2, (8,), "ru")
+    assert "ts=CAESEAoCCAMKAggDCgQIAhAIEAEaIAoCGgASGhIUCgcI6w8QBRgbEgcI6w8QBhgGGAoyAggBKgkKBToDRVVSGgA" in link and "q=Selectum+Family+Resort+Belek" in link
+
+    class Around:
+        def __init__(self, price):
+            self.price = price
+
+        def around(self, q):
+            return Stay(name="Sea View", price=self.price, rating=8.7, reviews=60, url="https://www.stayforlong.com/x", source="stayforlong", seller="Stayforlong")
+
+    xotelo = Stay(name="Hotel Kennedy", price=190, rating=8.8, reviews=214, url="https://www.booking.com/x", source="xotelo", seller="Agoda.com")
+    monkeypatch.setattr(Hotels, "_xotelo", lambda self, q, location: xotelo)
+    assert Hotels(Database(str(tmp_path / "a.sqlite")), Around(150)).cheapest(stay_query()).name == "Sea View"
+    kept = Hotels(Database(str(tmp_path / "b.sqlite")), Around(250)).cheapest(stay_query())
+    assert (kept.name, kept.seller) == ("Hotel Kennedy", "Agoda.com") and "q=Hotel+Kennedy+Naples" in kept.compare
+
+
+def holiday_user(env, **vacation):
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "party": "solo", "countries": [],
+                               "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
+                               "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"], **vacation}
+    r = client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    return engine, engine.users()[0][2]
+
+
+class OnePrice:
+    def __init__(self, price):
+        self.price_now = price
+
+    def resolve(self, url, alias="", geos=None):
+        from weekends.engine.tracked import Match
+        return Match(url=url, status="found", key="g1-d2", name="Lonicera", rating=4.4, reviews=10, lat=36.6, lon=31.8)
+
+    def price(self, key, checkin, checkout, guests, nights):
+        return (self.price_now(checkin) if callable(self.price_now) else self.price_now, "Booking.com", None)
+
+
+def test_price_alert_keeps_quiet_until_the_price_is_reached(env):
+    url = "https://www.booking.com/hotel/tr/lonicera-resort-spa.html"
+    engine, s = holiday_user(env, price_alerts={url: 2000})
+    engine.tracked = OnePrice(2500)
+    day = date(2026, 11, 11)
+    assert engine.vacation(s, "ru", day, full=False, sent={})[0] == []  # over the wanted price: nothing, though never sent
+    full, items = engine.vacation(s, "ru", day, full=True, sent={})
+    assert "≈2500€" in full[0] and "порога" not in full[0]  # the full summary shows it anyway
+    engine.tracked = OnePrice(1900)
+    blocks, items = engine.vacation(s, "ru", day, full=False, sent={items[0][0]: 2500.0})
+    assert "≈1900€" in blocks[0] and "🎯 не дороже вашего порога 2000€" in blocks[0] and "(было 2500€)" in blocks[0]
+    assert engine.vacation(s, "ru", day, full=False, sent=dict(items))[0] == []  # said once, the same price again is not news
+    engine.tracked = OnePrice(1700)
+    assert "≈1700€" in engine.vacation(s, "ru", day, full=False, sent=dict(items))[0][0]  # a further drop is
+
+
+def test_suggested_hotel_can_be_tracked_with_a_button(env, monkeypatch):
+    from weekends.engine import run
+    client, tg, app = env
+    url = "https://www.booking.com/hotel/tr/aqua-resort.html"
+    facts = [{"url": url, "name": "Aqua Resort - All Inclusive", "cc": "tr", "city": "Belek", "lat": 36.85, "lon": 31.05,
+              "stars": 5, "score": 8.8, "reviews": 900, "ai": True, "aqua": True, "ta": "g1-d1"}]
+    monkeypatch.setattr(run, "hotel_facts", lambda: facts)
+    engine, s = holiday_user(env, countries=["TR"], hotels=[],
+                             suggest={"enabled": True, "max_hotel_eur": 3000, "min_stars": 5, "all_inclusive": True, "aquapark": True, "min_rating": 8.5})
+    engine.tracked = OnePrice(2500)
+    engine.kiwi = RouteKiwi([])
+    blocks, _ = engine.vacation(s, "ru", date(2026, 11, 11), full=True, sent={}, chat_id=42)
+    block = next(b for b in blocks if "Aqua Resort" in b)
+    assert "все продавцы</a>" in block and [[b["text"] for b in row] for row in block.buttons] == [["➕ Aqua Resort"]]
+    data = block.buttons[0][0]["callback_data"]
+    query = {"id": "q1", "from": {"id": 42, "is_bot": False, "language_code": "ru"}, "data": data,
+             "message": {"message_id": 7, "chat": {"id": 42, "type": "private"}, "reply_markup": {"inline_keyboard": block.buttons}}}
+    app.state.bot.handle({"callback_query": query})
+    assert engine.users()[0][2]["blocks"]["vacation"]["hotels"] == [url]
+    assert tg.calls[-1][0] == "editMessageReplyMarkup" and tg.calls[-1][1]["reply_markup"]["inline_keyboard"][0][0]["text"] == "✓ Aqua Resort"
+    assert "Добавлен" in tg.calls[-2][1]["text"]
+    app.state.bot.handle({"callback_query": query})
+    assert "уже отслеживается" in tg.calls[-2][1]["text"] and engine.users()[0][2]["blocks"]["vacation"]["hotels"] == [url]
+    # tracked without a TripAdvisor match of its own: known by its facts, so it is priced at once
+    engine.tracked.resolve = lambda u, alias="", geos=None: run.Match(url=u, status="not_found")
+    blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 11), full=True, sent={})
+    assert "Aqua Resort" in blocks[0] and "≈2500€" in blocks[0]
+    other = {**query, "from": {"id": 43, "is_bot": False}, "message": {**query["message"], "chat": {"id": 43, "type": "private"}}}
+    app.state.bot.handle({"callback_query": other})  # someone else's button does nothing
+    assert "could not be added" in tg.calls[-1][1]["text"]
+
+
+def test_flexible_dates_pick_the_cheapest_stay_in_the_period(env):
+    engine, s = holiday_user(env, flexible=True, flex_nights=7, date_options=[{"start": "2027-06-01", "end": "2027-06-30"}])
+    early = itin("2027-06-03T00:25", "2027-06-10T23:10", price=300, dest="AYT", country="TR", ret_depart="2027-06-10T21:40")
+    late = itin("2027-06-20T00:25", "2027-06-27T23:10", price=320, dest="AYT", country="TR", ret_depart="2027-06-27T21:40")
+    wrong = itin("2027-06-05T00:25", "2027-06-09T23:10", price=100, dest="AYT", country="TR", ret_depart="2027-06-09T21:40")  # four nights
+
+    class Period:
+        def search(self, country="", **args):
+            if args.get("departureDateTo"):
+                return [early, late, wrong]
+            day = args["departureDate"]
+            return [f for f in (early, late) if f.depart.strftime("%d/%m/%Y") == day]
+
+    engine.kiwi = Period()
+    engine.tracked = OnePrice(lambda checkin: 2000 if checkin == "2027-06-03" else 1500)  # the later week is much cheaper to stay
+    blocks, items = engine.vacation(s, "ru", date(2026, 11, 11), full=True, sent={}, chat_id=42)
+    assert "20.06 (вс) - 27.06 (вс)" in blocks[0] and "Гибкие даты: самые выгодные 7 ночей в периоде 1.06 (вт) - 30.06 (ср)" in blocks[0]
+    assert "≈1500€" in blocks[0] and "Итого с перелётом ≈1820€" in blocks[0]
+    engine.tracked = OnePrice(lambda checkin: 100 if checkin == "2027-06-03" else 1400)
+    blocks, _ = engine.vacation(s, "ru", date(2026, 11, 12), full=False, sent=dict(items), chat_id=42)
+    assert "20.06 (вс) - 27.06 (вс)" in blocks[0] and "≈1400€" in blocks[0]  # between summaries the chosen dates stay
+    s["blocks"]["vacation"]["flexible"] = False
+    assert "1.06 (вт) - 30.06 (ср)" in engine.vacation(s, "ru", date(2026, 11, 11), full=True, sent={})[0][0]  # exact dates as before

@@ -15,13 +15,14 @@
 Every result keeps a direct link; nothing is ever booked by us."""
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
 import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -49,6 +50,7 @@ class Stay:
     place: str | None = None  # known resort or city the hotel is in
     approx: bool = False
     seller: str = ""  # whose price it is: Booking.com, Agoda.com, Vio.com...
+    compare: str = ""  # every seller's price for the dates, on Google Hotels
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,40 @@ def booking_search_link(q: StayQuery, hotel: str = "") -> str:
     if filters and not hotel:
         params.append(("nflt", ";".join(filters)))
     return "https://www.booking.com/searchresults.html?" + urlencode(params)
+
+
+def _varint(n: int) -> bytes:
+    out = b""
+    while True:
+        low, n = n & 0x7F, n >> 7
+        out += bytes([low | (0x80 if n else 0)])
+        if not n:
+            return out
+
+
+def _packed(number: int, payload: bytes) -> bytes:
+    return _varint(number << 3 | 2) + _varint(len(payload)) + payload
+
+
+def _number(number: int, value: int) -> bytes:
+    return _varint(number << 3) + _varint(value)
+
+
+def compare_link(hotel: str, city: str, checkin: date, checkout: date, adults: int, children: tuple[int, ...], lang: str) -> str:
+    """Google Hotels opened on this hotel for the exact dates and party: the
+    prices of every seller side by side, each with its own link. The dates
+    and the guests travel in the page's ts parameter, a small protobuf:
+    guests (3 an adult, 2 a child with the age), then the stay."""
+    def day(d: date) -> bytes:
+        return _number(1, d.year) + _number(2, d.month) + _number(3, d.day)
+
+    guests = b"".join(_packed(1, _number(1, 3)) for _ in range(adults))
+    guests += b"".join(_packed(1, _number(1, 2) + _number(2, age)) for age in children) + _number(2, 1)
+    stay = _packed(1, _packed(3, b"")) + _packed(2, _packed(2, _packed(1, day(checkin)) + _packed(2, day(checkout)) + _number(3, (checkout - checkin).days))
+                                                  + _packed(6, _number(1, 1)))
+    raw = _number(1, 1) + _packed(2, guests) + _packed(3, stay) + _packed(5, _packed(1, _packed(7, b"EUR")) + _packed(3, b""))
+    ts = base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    return "https://www.google.com/travel/search?" + urlencode({"q": f"{hotel} {city}".strip(), "ts": ts, "hl": lang})
 
 
 def without_affiliate(url: str) -> str:
@@ -181,11 +217,15 @@ class Hotels:
                 stay = self._xotelo(q, tripadvisor_keys()[q.iata])
         except Exception:  # a broken source must never break the digest
             log.exception("stay lookup failed for %s", q.iata)
-        if stay is None and self.stayforlong is not None and q.lat is not None:
-            try:
-                stay = self.stayforlong.around(q)
+        if self.stayforlong is not None and q.lat is not None and self.source != "booking":
+            try:  # asked every time: where both have a price, the lower one is taken
+                other = self.stayforlong.around(q)
+                if other is not None and (stay is None or (other.price or 1e9) < (stay.price or 1e9)):
+                    stay = other
             except Exception:
                 log.exception("stayforlong lookup failed for %s", q.iata)
+        if stay is not None and stay.name and not stay.compare:
+            stay = replace(stay, compare=compare_link(stay.name, q.city, q.checkin, q.checkout, q.adults, q.children, q.lang))
         if stay is not None:
             self._remember(q, stay)
         else:

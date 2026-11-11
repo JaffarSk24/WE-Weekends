@@ -291,3 +291,5 @@ footer a:hover { color: var(--text); }
   .slider label { grid-column: 1 / -1; }
   .card { padding: 18px 16px; }
 }
+.hotel-row .alert { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--text-soft); }
+.hotel-row .alert-price { width: 150px; }
