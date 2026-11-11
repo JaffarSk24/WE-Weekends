@@ -165,7 +165,7 @@ class Tracked:
         nights."""
         result = self._get(f"xr:{key}:{checkin}:{checkout}:{guests}", 12 * 3600, "https://data.xotelo.com/api/rates",
                            {"hotel_key": key, "chk_in": checkin, "chk_out": checkout, "adults": max(1, min(guests, 4)), "currency": "EUR"})
-        rates = [r for r in ((result or {}).get("rates") or []) if r.get("rate")]
+        rates = [r for r in (result.get("rates") or []) if r.get("rate")] if isinstance(result, dict) else []
         if not rates:
             return None
         cheapest = min(rates, key=lambda r: r["rate"])

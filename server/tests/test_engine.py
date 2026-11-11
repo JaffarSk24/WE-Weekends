@@ -469,6 +469,9 @@ class OfferSfl:
     def resolve(self, *a, **kw):
         return ("40494", "tr/x_serik")
 
+    def position(self, url):
+        return None
+
     def best(self, sfl_id, path, lang, checkin, checkout, adults, ages, all_inclusive=False, free_cancellation=False, pay_later=False):
         ok = [o for o in self.offers if (not free_cancellation or o.free_cancellation) and (not pay_later or o.pay_later)]
         return min(ok, key=lambda o: o.total) if ok else None
@@ -610,7 +613,7 @@ def test_xotelo_prices_hotels_without_a_price_hint(tmp_path):
     hotels = Hotels(Database(str(tmp_path / "h.sqlite")))
     hotels.client = httpx.Client(transport=httpx.MockTransport(handler))
     stay = REAL_XOTELO(hotels, stay_query(), "g1")
-    assert (stay.name, stay.price, stay.source) == ("Hotel h5", 20, "xotelo")
+    assert (stay.name, stay.price, stay.source, stay.seller) == ("Hotel h5", 20, "xotelo", "")
     assert sorted(asked) == ["h1", "h2", "h3", "h4", "h5"]  # asked together
 
 
@@ -691,6 +694,215 @@ def test_owner_hears_when_a_source_goes_quiet(env):
     engine._watch([(OWNER, "ru", {})], "2026-11-10")
     assert len(tg.sent) == 1 and tg.sent[0][0] == OWNER and "только для 1 из 10" in tg.sent[0][1]  # once a day
     engine.pool.clear()
-    engine.searched.add(("BTS", "IT"))
+    engine.searched[("BTS", "IT")] = {}
     engine._watch([(OWNER, "ru", {})], "2026-11-11")
     assert "поиск рейсов" in tg.sent[1][1]
+
+
+def test_long_messages_are_split_between_lines():
+    from weekends.engine.digest import pieces
+    line = '🏨 <a href="https://www.booking.com/hotel/tr/x.html?checkin=2027-05-27">Hotel</a> · ≈2000€'
+    parts = pieces("\n".join([line] * 120))
+    assert len(parts) > 1 and all(len(p) <= 3900 for p in parts)
+    assert "\n".join(parts) == "\n".join([line] * 120)  # nothing lost, no tag cut through
+    assert all(p.count("<a ") == p.count("</a>") for p in parts)
+    assert pieces("short") == ["short"] and len(pieces("<b>" + "x" * 5000 + "</b>")[0]) == 3900
+
+
+def test_stay_line_names_the_seller_and_the_children_caveat():
+    from weekends.engine.digest import item_text
+    from weekends.engine.score import Candidate
+    it = itin("2026-12-11T18:30", "2026-12-13T22:10", price=45, dest="NAP")
+    c = Candidate(it=it, mode="family", flight_price=45, entry="free", tags=[], workdays_lost=0, school_days_lost=0, out_slot="evening",
+                  ret_slot="evening", hotel_price=322, hotel_name="Hotel Duo", hotel_rating=8.4, hotel_reviews=3200,
+                  hotel_url="https://www.booking.com/x", hotel_source="xotelo", hotel_approx=True, hotel_seller="Vio.com")
+    text = item_text("ru", c, "Неаполь", 2, 1)
+    assert "322€ за 2 ночи, Vio.com · с детьми цена может отличаться" in text
+
+
+def test_estimates_learn_from_prices_found(tmp_path, monkeypatch):
+    from weekends.db import Database
+    from weekends.engine import hotels as hm
+    from weekends.engine.hotels import Hotels, Stay
+    monkeypatch.setattr(hm, "stay_baseline", lambda: {"cities": {"NAP": 100}, "all": 80})
+    q = stay_query(children=())
+
+    class Around:
+        stay = None
+
+        def around(self, q):
+            return self.stay
+
+    hotels = Hotels(Database(str(tmp_path / "a.sqlite")), Around())
+    assert hotels.cheapest(q).price == 200  # nothing seen yet: the baseline, 100 a night for two
+    for total in (300, 320, 340):
+        Around.stay = Stay(name="H", price=total, rating=9, reviews=50, url="u", source="stayforlong")
+        hotels.cheapest(q)
+    Around.stay = None
+    guess = hotels.cheapest(q)
+    assert (guess.source, guess.price) == ("estimate", 320)  # the middle of what was really found, 160 a night
+
+
+def test_stayforlong_looks_further_when_the_first_hotels_do_not_fit(tmp_path, monkeypatch):
+    import httpx
+
+    from weekends.db import Database
+    from weekends.engine import stayforlong
+    monkeypatch.setattr(stayforlong, "PAUSE", 0)
+    asked = []
+
+    def prop(i, total, rating):
+        return {"id": i, "name": f"Hotel {i}", "selling_rate": total, "currency": "EUR", "rating": rating, "comments": 200, "slug": f"hotel-{i}",
+                "rooms": [{"room_name": "Double"}], "property_location": {"city": "Naples", "city_slug": "naples", "country_code": "it"}}
+
+    def handler(request):
+        body = json.loads(request.content)
+        asked.append(body.get("excludedIDs"))
+        first = [prop(i, 100 + i, 7.0) for i in range(1, 16)]
+        return httpx.Response(200, json={"properties": first if not body.get("excludedIDs") else [prop(99, 400, 9.0)]})
+
+    sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s.sqlite")), sfl_client(handler))
+    stay = sfl.around(stay_query())
+    assert (stay.name, stay.price) == ("Hotel 99", 400) and asked == [None, list(range(1, 16))]
+
+
+def test_hotel_known_only_to_stayforlong_gets_its_flights(env):
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": [], "party": "solo",
+                               "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
+                               "hotels": ["https://www.booking.com/hotel/tr/new-place.html"]}
+    client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    from weekends.engine.stayforlong import Offer
+    from weekends.engine.tracked import Match
+
+    class T:
+        def resolve(self, url, alias="", geos=None):
+            return Match(url=url, status="not_found")
+
+    class S(OfferSfl):
+        def position(self, url):
+            return (36.86, 31.05)  # Belek: the nearest airport is Antalya
+
+    engine.tracked = T()
+    engine.sfl = S([Offer(total=1480, board="AI", policy="NOR", pay_now=0, until="2027-05-14", url="https://www.stayforlong.com/x")])
+    night = itin("2027-05-27T00:25", "2027-06-06T23:10", price=259, dest="AYT", country="TR", ret_depart="2027-06-06T21:40")
+    engine.kiwi = RouteKiwi([night])
+    blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 11), full=True, sent={})
+    assert "New Place" in blocks[0] and "≈1480€" in blocks[0] and "AYT" in blocks[0] and "Итого с перелётом ≈1739€" in blocks[0]
+    assert engine.holiday == {"asked": 1, "priced": 1}
+
+
+def test_owner_hears_when_holiday_hotels_lose_their_prices(env):
+    from conftest import OWNER
+    client, tg, app = env
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    engine.pool["BTS"]["k"] = itin("2026-12-11T18:30", "2026-12-13T22:10")
+    engine.holiday.update({"asked": 3, "priced": 1})
+    engine._watch([(OWNER, "ru", {})], "2026-11-11")
+    assert not tg.sent
+    engine.holiday.update({"asked": 3, "priced": 0})
+    engine._watch([(OWNER, "ru", {})], "2026-11-11")
+    assert len(tg.sent) == 1 and "ни для одного из 3" in tg.sent[0][1]
+
+
+def test_teenagers_are_hotel_children_not_extra_adults(env):
+    from weekends.engine.run import grown
+    assert grown(3, (8, 13)) == 2 and grown(1, ()) == 1
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "party": "family", "family": {"adults": 2, "children": [8, 13]},
+                               "countries": [], "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
+                               "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
+    client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    asked = []
+
+    class T:
+        def resolve(self, url, alias="", geos=None):
+            from weekends.engine.tracked import Match
+            return Match(url=url, status="found", key="g1-d2", name="Lonicera", rating=4.4, reviews=10)
+
+        def price(self, key, checkin, checkout, guests, nights):
+            asked.append(guests)
+            return (3000, "Booking.com", None)
+
+    class S(OfferSfl):
+        def best(self, sfl_id, path, lang, checkin, checkout, adults, ages, **kw):
+            asked.append((adults, ages))
+            return None
+
+    engine.tracked, engine.sfl = T(), S([])
+    blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 11), full=False, sent={})
+    assert asked == [4, (2, (8, 13))]  # four guests, not five
+    assert "2 взр. + 2 реб." in blocks[0] and "group_adults=2&amp;group_children=2" in blocks[0] and "age=8&amp;age=13" in blocks[0]
+
+
+def test_a_flight_search_outage_does_not_close_a_country(env):
+    client, tg, app = env
+    engine = Engine(app.state.cfg, app.state.db, tg)
+
+    class Down:
+        failed = 0
+
+        def search(self, country="", **args):
+            self.failed += 1
+            return []
+
+    engine.kiwi = Down()
+    need = {"horizon": 30, "nmin": 2, "nmax": 3, "school": set()}
+    engine._search_pair("BTS", "IT", need, date(2026, 11, 11))
+    assert engine.store.route_cities("BTS", "IT") is None  # not remembered as "no flights there" for a week
+
+    class Empty(Down):
+        def search(self, country="", **args):
+            return []
+
+    engine.kiwi = Empty()
+    engine._search_pair("BTS", "IT", need, date(2026, 11, 11))
+    assert engine.store.route_cities("BTS", "IT") == 0
+
+
+def test_a_wider_need_searches_again_the_same_day(env):
+    client, tg, app = env
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    seen = []
+    engine._search_pair = lambda origin, country, n, today: seen.append(n["horizon"])
+    engine.pool_day = date(2026, 11, 11)
+    user = settings(geography__groups=[], geography__include=["IT"])
+    engine.ensure_searches([(1, "ru", user)], date(2026, 11, 11))
+    engine.ensure_searches([(1, "ru", user)], date(2026, 11, 11))
+    wider = settings(geography__groups=[], geography__include=["IT"], trip__horizon_days=120)
+    engine.ensure_searches([(1, "ru", user), (2, "ru", wider)], date(2026, 11, 11))
+    assert len(seen) == 2 * len(user["profile"]["origins"]) and seen[-1] == 120
+
+
+def test_digest_nobody_received_is_tried_again(env):
+    from weekends.engine import run
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    engine.ensure_searches = lambda users, today: None
+    engine.build = lambda chat_id, lang, s, today, first: ([("text", None)], [("solo:k", 40.0)])
+    sent = tg.send
+    tg.send = lambda chat_id, text, buttons=None: None  # Telegram is down
+    now = datetime(2026, 11, 11, 20, 0, tzinfo=run.TZ)
+    engine.tick(now)
+    assert not engine.store.digest_sent(42, "2026-11-11") and not engine.store.last_sent(42)
+    tg.send = sent
+    engine.tick(now)
+    assert engine.store.digest_sent(42, "2026-11-11") and "solo:k" in engine.store.last_sent(42)
+
+
+def test_family_fare_is_compared_with_the_usual_fare_for_one():
+    from weekends.engine.digest import item_text
+    from weekends.engine.score import Candidate
+    it = itin("2026-12-11T18:30", "2026-12-13T22:10", price=40, dest="NAP")
+    c = Candidate(it=it, mode="family", flight_price=120, entry="free", tags=[], workdays_lost=0, school_days_lost=0, out_slot="evening",
+                  ret_slot="evening", hotel_price=300, hotel_name="H", hotel_rating=8.4, hotel_reviews=300, hotel_url="https://x", usual=80)
+    assert "дешевле обычного на 50%" in item_text("ru", c, "Неаполь", 2, 1) or "50%" in item_text("ru", c, "Неаполь", 2, 1)

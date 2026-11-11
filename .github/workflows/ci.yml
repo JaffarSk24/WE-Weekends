@@ -28,6 +28,11 @@ jobs:
       - run: bandit -q -r weekends
       - run: pip-audit -r requirements.txt --strict
       - run: pytest -q -p no:warnings tests
+      - name: The server image builds and starts Python with the app in it
+        working-directory: .
+        run: |
+          docker build -q -f server/Dockerfile -t we-weekends:ci .
+          docker run --rm we-weekends:ci python -c "import weekends.app, weekends.engine.run"
 
   web:
     name: Web page checks

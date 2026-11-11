@@ -42,6 +42,9 @@ class NoStayforlong:
     def around(self, *a, **kw):
         return None
 
+    def position(self, *a, **kw):
+        return None
+
 
 from weekends.engine.hotels import Hotels  # noqa: E402
 

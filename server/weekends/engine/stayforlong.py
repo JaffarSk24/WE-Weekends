@@ -84,6 +84,10 @@ class Stayforlong:
                 url TEXT PRIMARY KEY, status TEXT NOT NULL, sfl_id TEXT NOT NULL DEFAULT '', path TEXT NOT NULL DEFAULT '',
                 checked_at INTEGER NOT NULL)""")
             con.execute("CREATE TABLE IF NOT EXISTS sfl_cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, fetched_at INTEGER NOT NULL)")
+            if "lat" not in {r["name"] for r in con.execute("PRAGMA table_info(sfl_map)")}:
+                con.execute("ALTER TABLE sfl_map ADD COLUMN lat REAL")
+                con.execute("ALTER TABLE sfl_map ADD COLUMN lon REAL")
+        self.positions: dict[str, tuple[float, float]] = {}  # where the hotels just matched stand
 
     def _request(self, method: str, url: str, **kw) -> object | None:
         wait = PAUSE - (time.monotonic() - self._last)
@@ -127,19 +131,33 @@ class Stayforlong:
                 best, best_score = h, score
         if best is None:
             return None
+        c = best.get("Coordinate") or {}
+        if c.get("lat") is not None:
+            self.positions[str(best["ID"])] = (float(c["lat"]), float(c["lon"]))
         return str(best["ID"]), hotel_path(country, str(best["Slug"]), str(best["CitySlug"]))
 
     def resolve(self, url: str, name: str, lat: float | None, lon: float | None, country: str) -> tuple[str, str] | None:
         """search(), remembered per Booking address."""
         with self.db.tx() as con:
             row = con.execute("SELECT * FROM sfl_map WHERE url = ?", (url,)).fetchone()
+        if row and row["status"] == "found" and row["lat"] is None and lat is None and time.time() - row["checked_at"] > RECHECK_NOT_FOUND:
+            row = None  # matched before positions were kept: looked up once more
         if row and (row["status"] == "found" or time.time() - row["checked_at"] < RECHECK_NOT_FOUND):
             return (row["sfl_id"], row["path"]) if row["status"] == "found" else None
         found = self.search(name, lat, lon, country) if name else None
+        lat_lon = self.positions.get(found[0]) if found else None
         with self.db.tx() as con:
-            con.execute("INSERT OR REPLACE INTO sfl_map VALUES (?, ?, ?, ?, ?)",
-                        (url, "found" if found else "not_found", found[0] if found else "", found[1] if found else "", int(time.time())))
+            con.execute("INSERT OR REPLACE INTO sfl_map (url, status, sfl_id, path, checked_at, lat, lon) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (url, "found" if found else "not_found", found[0] if found else "", found[1] if found else "", int(time.time()),
+                         lat_lon[0] if lat_lon else None, lat_lon[1] if lat_lon else None))
         return found
+
+    def position(self, url: str) -> tuple[float, float] | None:
+        """Where a matched hotel stands, for the nearest airport when
+        TripAdvisor does not know the hotel."""
+        with self.db.tx() as con:
+            row = con.execute("SELECT lat, lon FROM sfl_map WHERE url = ? AND status = 'found'", (url,)).fetchone()
+        return (row["lat"], row["lon"]) if row and row["lat"] is not None else None
 
     # -- prices ------------------------------------------------------------
     def offers(self, sfl_id: str, checkin: str, checkout: str, adults: int, ages: tuple[int, ...]) -> list[dict]:
@@ -186,44 +204,60 @@ class Stayforlong:
     # -- hotels around a city ----------------------------------------------
     def around(self, q):
         """The cheapest hotel around the destination that meets the user's
-        stay rules, for a weekend trip: one search of the box around the
-        city, cheapest first. Hostels and dormitory beds are left out."""
+        stay rules, for a weekend trip: a search of the box around the city,
+        cheapest first, and the next fifteen hotels when none of the first
+        ones will do. Hostels and dormitory beds are left out."""
         from .hotels import Stay
-        key = f"sfa:{q.iata}:{q.checkin}:{q.checkout}:{q.adults}:{','.join(map(str, q.children))}:{q.min_rating}:{q.min_stars}"
+        need = min(q.min_reviews, MIN_REVIEWS)  # Stayforlong counts its own guests, far fewer than TripAdvisor
+        seen: list[int] = []
+        for batch in range(2):
+            found = self._around(q, batch, seen)
+            if found is None:
+                return None
+            ok = [h for h in found if h["rating"] >= q.min_rating and h["reviews"] >= need and h["name"] not in q.avoid
+                  and not any(_contains(words(f"{h['name']} {h['city']}"), pattern) for pattern in q.exclude)]
+            if ok:
+                h = min(ok, key=lambda x: x["total"])
+                return Stay(name=h["name"], price=h["total"], rating=h["rating"], reviews=h["reviews"], place=place_of(h["city"]),
+                            source="stayforlong", seller="Stayforlong",
+                            url=page_url(h["path"], q.lang, q.checkin.isoformat(), q.checkout.isoformat(), q.adults, q.children))
+            seen += [h["id"] for h in found if h.get("id")]
+            if len(found) < 10:
+                break  # the city has no more
+        return None
+
+    def _around(self, q, batch: int, seen: list[int]) -> list[dict] | None:
+        """One batch of the search: the hotels not seen yet, as the site
+        itself loads more of them."""
+        key = f"sfa:{q.iata}:{q.checkin}:{q.checkout}:{q.adults}:{','.join(map(str, q.children))}:{q.min_rating}:{q.min_stars}:{batch}"
         with self.db.tx() as con:
             row = con.execute("SELECT body, fetched_at FROM sfl_cache WHERE key = ?", (key,)).fetchone()
         if row and time.time() - row["fetched_at"] < PRICES_TTL:
-            found = json.loads(row["body"])
-        else:
-            body = {"affiliate": "stayforlong", "source": "web", "offer_type": "multi-offer", "device": "desktop",
-                    "checkin": q.checkin.isoformat(), "checkout": q.checkout.isoformat(), "lang": "en", "market": "sk", "currency": "EUR",
-                    "rooms": [{"adults": q.adults, "children": list(q.children)}], "sortBy": "price", "page": 0, "offset": 0,
-                    "latitude": q.lat, "longitude": q.lon, "accommodations": ["HOTEL"],
-                    "box_shape": {"top_left": {"lon": q.lon - AROUND_LON, "lat": q.lat + AROUND_LAT},
-                                  "bottom_right": {"lon": q.lon + AROUND_LON, "lat": q.lat - AROUND_LAT}}}
-            if q.min_rating >= 6:
-                body["rating"] = int(q.min_rating)
-            if q.min_stars:
-                body["stars"] = list(range(q.min_stars, 6))
-            data = self._request("POST", f"{GATEWAY}/v3/search-by-coordinates-geo", json=body)
-            if not isinstance(data, dict) or "properties" not in data:
-                return None  # not cached: tried again next time
-            found = []
-            for h in data.get("properties") or []:
-                room = ((h.get("rooms") or [{}])[0].get("room_name") or "").lower()
-                loc = h.get("property_location") or {}
-                if h.get("currency", "EUR") != "EUR" or not h.get("selling_rate") or any(w in room for w in ("dorm", "bed in", "shared")):
-                    continue
-                found.append({"name": str(h.get("name", ""))[:120], "total": round(float(h["selling_rate"])), "rating": round(float(h.get("rating") or 0), 1),
-                              "reviews": int(h.get("comments") or 0), "city": str(loc.get("city", "")),
-                              "path": hotel_path(str(loc.get("country_code", "")).lower(), str(h.get("slug", "")), str(loc.get("city_slug", "")))})
-            with self.db.tx() as con:
-                con.execute("INSERT OR REPLACE INTO sfl_cache (key, body, fetched_at) VALUES (?, ?, ?)", (key, json.dumps(found), int(time.time())))
-        need = min(q.min_reviews, MIN_REVIEWS)  # Stayforlong counts its own guests, far fewer than TripAdvisor
-        ok = [h for h in found if h["rating"] >= q.min_rating and h["reviews"] >= need and h["name"] not in q.avoid
-              and not any(_contains(words(f"{h['name']} {h['city']}"), pattern) for pattern in q.exclude)]
-        if not ok:
-            return None
-        h = min(ok, key=lambda x: x["total"])
-        return Stay(name=h["name"], price=h["total"], rating=h["rating"], reviews=h["reviews"], place=place_of(h["city"]), source="stayforlong",
-                    url=page_url(h["path"], q.lang, q.checkin.isoformat(), q.checkout.isoformat(), q.adults, q.children))
+            return json.loads(row["body"])
+        body = {"affiliate": "stayforlong", "source": "web", "offer_type": "multi-offer", "device": "desktop",
+                "checkin": q.checkin.isoformat(), "checkout": q.checkout.isoformat(), "lang": "en", "market": "sk", "currency": "EUR",
+                "rooms": [{"adults": q.adults, "children": list(q.children)}], "sortBy": "price", "page": 0, "offset": 0,
+                "latitude": q.lat, "longitude": q.lon, "accommodations": ["HOTEL"],
+                "box_shape": {"top_left": {"lon": q.lon - AROUND_LON, "lat": q.lat + AROUND_LAT},
+                              "bottom_right": {"lon": q.lon + AROUND_LON, "lat": q.lat - AROUND_LAT}}}
+        if seen:
+            body["excludedIDs"] = seen
+        if q.min_rating >= 6:
+            body["rating"] = int(q.min_rating)
+        if q.min_stars:
+            body["stars"] = list(range(q.min_stars, 6))
+        data = self._request("POST", f"{GATEWAY}/v3/search-by-coordinates-geo", json=body)
+        if not isinstance(data, dict) or "properties" not in data:
+            return None  # not cached: tried again next time
+        found = []
+        for h in data.get("properties") or []:
+            room = ((h.get("rooms") or [{}])[0].get("room_name") or "").lower()
+            loc = h.get("property_location") or {}
+            entry = {"id": h.get("id"), "name": str(h.get("name", ""))[:120], "total": 0, "rating": 0.0, "reviews": 0, "city": str(loc.get("city", "")), "path": ""}
+            if h.get("currency", "EUR") == "EUR" and h.get("selling_rate") and not any(w in room for w in ("dorm", "bed in", "shared")):
+                entry |= {"total": round(float(h["selling_rate"])), "rating": round(float(h.get("rating") or 0), 1), "reviews": int(h.get("comments") or 0),
+                          "path": hotel_path(str(loc.get("country_code", "")).lower(), str(h.get("slug", "")), str(loc.get("city_slug", "")))}
+            found.append(entry)  # the unfit ones too: their ids are left out of the next batch
+        with self.db.tx() as con:
+            con.execute("INSERT OR REPLACE INTO sfl_cache (key, body, fetched_at) VALUES (?, ?, ?)", (key, json.dumps(found), int(time.time())))
+        return found

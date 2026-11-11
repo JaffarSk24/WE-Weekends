@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ from ..db import Database
 from .places import _contains, place_of, words
 
 log = logging.getLogger("weekends.hotels")
+SEEN_DAYS = 90  # how long a found price counts for the estimates
 MAX_RATE_LOOKUPS = 6  # hotels of one city asked for rates, at the same time
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -46,6 +48,7 @@ class Stay:
     source: str  # booking, xotelo, stayforlong, estimate, link
     place: str | None = None  # known resort or city the hotel is in
     approx: bool = False
+    seller: str = ""  # whose price it is: Booking.com, Agoda.com, Vio.com...
 
 
 @dataclass(frozen=True)
@@ -113,17 +116,22 @@ def stay_baseline() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
-def estimate(q: StayQuery) -> float | None:
-    """The usual price of a good hotel room in the city for these nights: the
-    city's own nightly price for two, else the country's, else the middle of
-    all cities. A single traveller pays most of a double room, and each
-    further guest adds about a third."""
+def party_factor(persons: int) -> float:
+    """A single traveller pays most of a double room, and each further guest
+    adds about a third."""
+    return 0.85 if persons == 1 else 1 + 0.35 * max(0, persons - 2)
+
+
+def estimate(q: StayQuery, seen: float | None = None) -> float | None:
+    """The usual price of a good hotel room in the city for these nights:
+    what the engine itself paid attention to lately (seen, a night for two),
+    else the city's nightly price for two from the baseline, else the
+    country's, else the middle of all cities."""
     base = stay_baseline()
-    nightly = (base.get("cities") or {}).get(q.iata) or (base.get("countries") or {}).get(q.country.upper()) or base.get("all")
+    nightly = seen or (base.get("cities") or {}).get(q.iata) or (base.get("countries") or {}).get(q.country.upper()) or base.get("all")
     if not nightly:
         return None
-    persons = q.adults + len(q.children)
-    factor = 0.85 if persons == 1 else 1 + 0.35 * max(0, persons - 2)
+    factor = party_factor(q.adults + len(q.children))
     nightly = max(30.0, min(float(nightly), 350.0))  # one odd weekend must not make a city free or unaffordable
     return round(nightly * factor * q.nights)
 
@@ -138,6 +146,24 @@ class Hotels:
         self.calls = 0
         with db.tx() as con:
             con.execute("CREATE TABLE IF NOT EXISTS hotel_cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, fetched_at INTEGER NOT NULL)")
+            # Real prices found, a night for two: the estimates learn from them.
+            con.execute("CREATE TABLE IF NOT EXISTS stay_seen (iata TEXT NOT NULL, seen_at INTEGER NOT NULL, nightly REAL NOT NULL)")
+            con.execute("CREATE INDEX IF NOT EXISTS stay_seen_iata ON stay_seen (iata, seen_at)")
+
+    def _remember(self, q: StayQuery, stay: Stay) -> None:
+        if not stay.price or q.nights < 1:
+            return
+        nightly = stay.price / q.nights / party_factor(q.adults + len(q.children))
+        with self.db.tx() as con:
+            con.execute("INSERT INTO stay_seen VALUES (?, ?, ?)", (q.iata, int(time.time()), nightly))
+            con.execute("DELETE FROM stay_seen WHERE seen_at < ?", (int(time.time()) - SEEN_DAYS * 86400,))
+
+    def _seen(self, iata: str) -> float | None:
+        """The middle of the real nightly prices of the last months, once
+        there are a few of them."""
+        with self.db.tx() as con:
+            rows = con.execute("SELECT nightly FROM stay_seen WHERE iata = ? AND seen_at >= ?", (iata, int(time.time()) - SEEN_DAYS * 86400)).fetchall()
+        return statistics.median(r["nightly"] for r in rows) if len(rows) >= 3 else None
 
     @property
     def source(self) -> str:
@@ -160,8 +186,10 @@ class Hotels:
                 stay = self.stayforlong.around(q)
             except Exception:
                 log.exception("stayforlong lookup failed for %s", q.iata)
-        if stay is None:
-            guess = estimate(q)
+        if stay is not None:
+            self._remember(q, stay)
+        else:
+            guess = estimate(q, self._seen(q.iata))
             if guess:
                 return Stay(name="", price=guess, rating=None, reviews=None, url=link, source="estimate", approx=True)
         return stay or Stay(name="", price=None, rating=None, reviews=None, url=link, source="link")
@@ -211,7 +239,7 @@ class Hotels:
                 return (r.json().get("result") or {}).get("rates") or []
 
             try:
-                return self._cached(f"xr:{h['key']}:{q.checkin}:{q.checkout}:{persons}", 12 * 3600, fetch_rates)
+                return self._cached(f"xw:{h['key']}:{q.checkin}:{q.checkout}:{persons}", 12 * 3600, fetch_rates)
             except (httpx.HTTPError, ValueError):
                 return []
 
@@ -220,16 +248,15 @@ class Hotels:
             answers = list(pool.map(rates_of, [h for _, _, h in asked]))
         best: Stay | None = None
         for (rating, count, h), rates in zip(asked, answers, strict=True):
-            prices = [float(x["rate"]) for x in rates if x.get("rate")]
-            booking = [float(x["rate"]) for x in rates if x.get("code") == "BookingCom" and x.get("rate")]
-            if not prices:
+            offers = [x for x in rates if x.get("rate")]
+            if not offers:
                 continue
-            nightly = booking[0] if booking else min(prices)
-            total = round(nightly * q.nights)
+            offer = min(offers, key=lambda x: float(x["rate"]))  # the lowest price, with the name of who sells at it
+            total = round(float(offer["rate"]) * q.nights)
             if best is None or total < (best.price or 1e9):
                 location = str(h.get("url", "")).rsplit("-Reviews-", 1)[-1].removesuffix(".html").split("-", 1)[-1]
                 best = Stay(name=h.get("name", ""), price=total, rating=round(rating, 1), reviews=count, place=place_of(location.replace("_", " ")),
-                            url=booking_search_link(q, h.get("name", "")), source="xotelo",
+                            url=booking_search_link(q, h.get("name", "")), source="xotelo", seller=str(offer.get("name") or "")[:40],
                             approx=len(q.children) > 0 or persons > 4)
         return best
 

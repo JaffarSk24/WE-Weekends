@@ -19,6 +19,7 @@ let lang = pickLang();
 let geo = null;
 let me = null;
 let draft = null;
+const DRAFT_KEY = 'wew.draft';
 let saved = '';
 const root = document.getElementById('app');
 
@@ -225,6 +226,11 @@ async function loadMe() {
   me = res.data;
   draft = structuredClone(me.settings);
   saved = JSON.stringify(draft);
+  const kept = store.get('sessionStorage', DRAFT_KEY);
+  if (kept) {
+    store.del('sessionStorage', DRAFT_KEY);
+    try { draft = JSON.parse(kept); } catch { /* an unreadable draft is dropped */ }
+  }
   window.scrollTo(0, 0);
   if (LANGS.includes(me.lang) && !new URLSearchParams(location.search).get('lang') && !store.get('localStorage', LANG_KEY)) lang = me.lang;
   render();
@@ -276,12 +282,14 @@ function kidsEditor(list) {
   return kids;
 }
 
-function stepper(obj, key, min, max, label) {
+function stepper(obj, key, min, max, label, onchange) {
   const out = h('output', { 'aria-live': 'polite' }, String(obj[key]));
-  const set = (v) => { obj[key] = Math.min(max, Math.max(min, v)); out.textContent = String(obj[key]); markDirty(); };
-  return h('div', { class: 'stepper', role: 'group', 'aria-label': label },
+  const set = (v) => { obj[key] = Math.min(max, Math.max(min, v)); out.textContent = String(obj[key]); markDirty(); if (onchange) onchange(); };
+  const box = h('div', { class: 'stepper', role: 'group', 'aria-label': label },
     h('button', { type: 'button', 'aria-label': '−', onclick: () => set(obj[key] - 1) }, '−'), out,
     h('button', { type: 'button', 'aria-label': '+', onclick: () => set(obj[key] + 1) }, '+'));
+  box.show = () => { out.textContent = String(obj[key]); };  // after the value was changed from outside
+  return box;
 }
 
 function select(obj, key, options, onchange) {
@@ -450,7 +458,8 @@ function countrySingle(obj, key, allowed, emptyLabel) {
 
 function rangeList(list, max, withScope) {
   const box = h('div', { class: 'ranges' });
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();  // the user's own day, not the UTC one
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const paint = () => {
     box.replaceChildren(...list.map((item, i) => h('div', { class: 'range' },
       h('label', {}, t('from'), h('input', { type: 'date', value: item.start, min: today, onchange: (e) => { item.start = e.target.value; if (item.end < item.start) { item.end = item.start; paint(); } markDirty(); } })),
@@ -490,6 +499,13 @@ function settingsView() {
 
   // 2. Where
   const prio = (key) => h('div', { class: 'prio-row' }, h('span', { class: 'prio-label' }, t(key)), segmented(s.priorities, key, t('prio').map((label, i) => [i, label])));
+  // The shortest trip never passes the longest: moving one stepper past the other takes it along.
+  const nightsMin = stepper(s.trip, 'nights_min', 1, 7, t('nights_min'), () => {
+    if (s.trip.nights_max < s.trip.nights_min) { s.trip.nights_max = s.trip.nights_min; nightsMax.show(); }
+  });
+  const nightsMax = stepper(s.trip, 'nights_max', 1, 14, t('nights_max'), () => {
+    if (s.trip.nights_min > s.trip.nights_max) { s.trip.nights_min = s.trip.nights_max; nightsMin.show(); }
+  });
   const where = panel(t('tab_where'), t('where_intro'),
     group(t('priorities'), h('div', { class: 'prio' }, prio('sea'), prio('mountains'), prio('sights'))),
     group(t('groups'), chips(s.geography.groups, Object.keys(geo.groups).map((g) => [g, t(`g_${g}`)]), { max: 20 })),
@@ -499,8 +515,7 @@ function settingsView() {
     group(t('exclude_places'), placePicker(s.geography.exclude_places, 50), t('exclude_places_hint')),
     h('h3', {}, t('s_trip')),
     h('div', { class: 'two compact' },
-      group(t('nights_min'), stepper(s.trip, 'nights_min', 1, 7, t('nights_min'))),
-      group(t('nights_max'), stepper(s.trip, 'nights_max', 1, 14, t('nights_max')))),
+      group(t('nights_min'), nightsMin), group(t('nights_max'), nightsMax)),
     group(t('horizon'), segmented(s.trip, 'horizon_days', [[30, '30'], [60, '60'], [90, '90'], [120, '120'], [180, '180']])));
 
   // 3. Budget and stay
@@ -553,8 +568,12 @@ function settingsView() {
   };
   const vac = s.blocks.vacation;
   const hotels = h('div', { class: 'hotels' });
-  const paintHotels = () => {
-    const input = h('input', { type: 'url', inputmode: 'url', placeholder: t('hotel_placeholder'), 'aria-label': t('hotel_url') });
+  const paintHotels = (polled) => {
+    // The status poll repaints every few seconds: not while the user types here,
+    // and never at the cost of an address typed but not added yet.
+    if (polled === true && hotels.contains(document.activeElement)) return;
+    const typed = hotels.querySelector('.url-row input');
+    const input = h('input', { type: 'url', inputmode: 'url', placeholder: t('hotel_placeholder'), 'aria-label': t('hotel_url'), value: polled === true && typed ? typed.value : '' });
     const msg = h('p', { class: 'error small', role: 'alert' });
     const add = () => {
       const url = normalizeBooking(input.value);
@@ -569,7 +588,7 @@ function settingsView() {
       if (!st || st.status === 'pending') status.textContent = t('hotel_pending');
       else if (st.status === 'found') status.textContent = fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 });
       const alias = h('input', { type: 'text', maxlength: 100, value: vac.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
-        oninput: (e) => { const v = e.target.value.replace(/[<>]/g, ''); if (v.trim()) vac.hotel_names[url] = v; else delete vac.hotel_names[url]; markDirty(); } });
+        oninput: (e) => { const v = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); if (v.trim()) vac.hotel_names[url] = v; else delete vac.hotel_names[url]; markDirty(); } });
       return h('div', { class: 'hotel-row' },
         h('span', { class: 'tag' },
           h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
@@ -644,7 +663,10 @@ function settingsView() {
     h('h3', {}, t('s_account')),
     toggle(pausedBox, 'paused', t('pause'), async () => {
       const res = await api('POST', '/v1/pause', { paused: pausedBox.paused });
-      if (res.ok) me.paused = pausedBox.paused;
+      if (res.ok) { me.paused = pausedBox.paused; render(); return; }
+      pausedBox.paused = me.paused;  // not saved: the switch goes back and says why
+      render();
+      window.alert(errorText(res));
     }),
     h('div', { class: 'buttons left' },
       h('button', { type: 'button', class: 'btn small', onclick: async () => { await api('POST', '/v1/logout-all'); store.del('localStorage', TOKEN_KEY); me = null; render(); } }, t('logout_all')),
@@ -696,7 +718,7 @@ async function refreshHotels(paint, tries = 0) {
   const res = await api('GET', '/v1/hotels');
   if (!res.ok || !Array.isArray(res.data.hotels)) return;
   for (const st of res.data.hotels) hotelStatus[st.url] = st;
-  paint();
+  paint(true);
   if (res.data.hotels.some((st) => st.status === 'pending') && tries < 36) hotelTimer = setTimeout(() => refreshHotels(paint, tries + 1), 5000);
 }
 
@@ -752,7 +774,11 @@ async function save() {
   }
   if (res.status === 409) { window.alert(t('err_conflict')); await loadMe(); return; }
   if (res.status === 422 && Array.isArray(res.data.fields)) { paintBar(fmt('err_fields', { f: res.data.fields.slice(0, 5).join(', ') })); return; }
-  if (res.status === 401) { me = null; render(); return; }
+  if (res.status === 401) {
+    // The session ended: the edits wait in this tab and come back after signing in.
+    store.set('sessionStorage', DRAFT_KEY, JSON.stringify(draft));
+    me = null; render(); return;
+  }
   paintBar(errorText(res));
 }
 
@@ -783,6 +809,9 @@ async function telegramSignIn() {
   history.replaceState(null, '', location.pathname + location.search);
   telegramEvent('web_app_ready');
   telegramEvent('web_app_expand');
+  // A session kept from the last opening is used again: a new one each time
+  // would push the user's browser sessions out of the ten the server keeps.
+  if (store.get('localStorage', TOKEN_KEY) && (await api('GET', '/v1/me')).ok) return;
   const res = await api('POST', '/v1/auth/telegram', { init_data: data });
   if (res.ok && typeof res.data.token === 'string') store.set('localStorage', TOKEN_KEY, res.data.token);
 }

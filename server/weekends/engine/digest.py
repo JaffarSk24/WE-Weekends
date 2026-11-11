@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
@@ -28,8 +29,11 @@ TX = {
         "stay_nights": {1: "ночь", 2: "ночи", 5: "ночей"},
         "watch_flights": "⚠ WE Weekends: поиск рейсов сегодня не вернул ни одного варианта. Проверьте источник рейсов.",
         "watch_stays": "⚠ WE Weekends: точная цена жилья нашлась только для {real} из {asked} поездок, остальные по оценке. Похоже, источник цен отелей перестал отвечать.",
+        "stay_approx": " · с детьми цена может отличаться",
+        "watch_holiday": "⚠ WE Weekends: ни для одного из {asked} отслеживаемых отелей отпуска сегодня не нашлось цены. Похоже, источник цен отелей перестал отвечать.",
         "stay_estimate": "🏨 жильё ≈{p}€ за {n}: это обычная цена хорошего отеля в городе, точной на эти даты пока нет. <a href=\"{url}\">Варианты на Booking</a>",
         "stay_rating_guests": "Stayforlong {r} из 10, отзывов: {c}",
+        "stay_rating_booking": "Booking {r} из 10, отзывов: {c}",
         "total_estimate": "💶 <b>Итого ≈{t}€</b> с оценкой жилья",
         "stay_none": "🏨 цену жилья не нашли: <a href=\"{url}\">варианты на Booking</a> на ваши даты",
         "transfer": "🚕 трансфер туда и обратно ~{x}€ (оценка)",
@@ -91,8 +95,11 @@ TX = {
         "stay_nights": {1: "noc", 2: "noci", 5: "nocí"},
         "watch_flights": "⚠ WE Weekends: hľadanie letov dnes nevrátilo ani jednu možnosť. Skontrolujte zdroj letov.",
         "watch_stays": "⚠ WE Weekends: presnú cenu ubytovania sme našli len pre {real} z {asked} ciest, ostatné sú odhad. Zdroj cien hotelov zrejme prestal odpovedať.",
+        "stay_approx": " · s deťmi sa cena môže líšiť",
+        "watch_holiday": "⚠ WE Weekends: pre žiadny z {asked} sledovaných hotelov dovolenky sme dnes nenašli cenu. Zdroj cien hotelov zrejme prestal odpovedať.",
         "stay_estimate": "🏨 ubytovanie ≈{p}€ za {n}: je to bežná cena dobrého hotela v meste, presnú na tieto dni zatiaľ nemáme. <a href=\"{url}\">Možnosti na Bookingu</a>",
         "stay_rating_guests": "Stayforlong {r} z 10, recenzií: {c}",
+        "stay_rating_booking": "Booking {r} z 10, recenzií: {c}",
         "total_estimate": "💶 <b>Spolu ≈{t}€</b> s odhadom ubytovania",
         "stay_none": "🏨 cenu ubytovania sme nenašli: <a href=\"{url}\">možnosti na Bookingu</a> na vaše dátumy",
         "transfer": "🚕 transfer tam a späť ~{x}€ (odhad)",
@@ -154,8 +161,11 @@ TX = {
         "stay_nights": {1: "night", 2: "nights", 5: "nights"},
         "watch_flights": "⚠ WE Weekends: the flight search returned nothing today. Check the flight source.",
         "watch_stays": "⚠ WE Weekends: an exact stay price was found for only {real} of {asked} trips, the rest are estimates. The hotel price source seems to have stopped answering.",
+        "stay_approx": " · may differ with children",
+        "watch_holiday": "⚠ WE Weekends: none of the {asked} tracked holiday hotels got a price today. The hotel price source seems to have stopped answering.",
         "stay_estimate": "🏨 stay ≈{p}€ for {n}: the usual price of a good hotel in the city, no exact one for these dates yet. <a href=\"{url}\">Options on Booking</a>",
         "stay_rating_guests": "Stayforlong {r} of 10, {c} reviews",
+        "stay_rating_booking": "Booking {r} of 10, {c} reviews",
         "total_estimate": "💶 <b>Total ≈{t}€</b> with an estimated stay",
         "stay_none": "🏨 no stay price found: <a href=\"{url}\">options on Booking</a> for your dates",
         "transfer": "🚕 transfer both ways ~{x}€ (estimate)",
@@ -260,6 +270,24 @@ def party(lang: str, adults: int, kids: int) -> str:
     return t["party"].format(a=adults, k=t["party_kids"].format(n=kids) if kids else "")
 
 
+def pieces(text: str, limit: int = 3900) -> list[str]:
+    """A long message as several that Telegram takes (4096 characters at
+    most), cut between lines, so a tag is never cut through and nothing is
+    lost. A single line longer than the limit loses its markup and its end."""
+    out, part = [], ""
+    for line in text.split("\n"):
+        if len(line) > limit:
+            line = re.sub(r"<[^>]*>", "", line)[:limit]
+        if part and len(part) + 1 + len(line) > limit:
+            out.append(part)
+            part = line
+        else:
+            part = f"{part}\n{line}" if part else line
+    if part:
+        out.append(part)
+    return out
+
+
 def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: int = 0, new: bool = True) -> str:
     t = TX[lang]
     it = c.it
@@ -276,11 +304,18 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
         elif c.hotel_price is not None:
             if c.hotel_source == "stayforlong":
                 rating = t["stay_rating_guests"].format(r=f"{c.hotel_rating or 0:.1f}", c=c.hotel_reviews or 0)
+            elif c.hotel_source == "booking":
+                rating = t["stay_rating_booking"].format(r=f"{c.hotel_rating or 0:.1f}", c=c.hotel_reviews or 0)
             else:
                 rating = t["stay_rating"].format(r=f"{(c.hotel_rating or 0) / 2:.1f}", c=c.hotel_reviews or 0)
             place = f", {e(place_name(c.hotel_place, lang))}" if c.hotel_place else ""
-            lines.append(t["stay"].format(url=e(c.hotel_url), name=e(c.hotel_name), place=place, rating=e(rating),
-                                          p=round(c.hotel_price), n=f"{it.nights} {plural(lang, it.nights)}"))
+            line = t["stay"].format(url=e(c.hotel_url), name=e(c.hotel_name), place=place, rating=e(rating),
+                                    p=round(c.hotel_price), n=f"{it.nights} {plural(lang, it.nights)}")
+            if c.hotel_seller:
+                line += f", {e(c.hotel_seller)}"
+            if c.hotel_approx:
+                line += t["stay_approx"]
+            lines.append(line)
         else:
             lines.append(t["stay_none"].format(url=e(c.hotel_url)))
         if c.transfer:
@@ -298,8 +333,8 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
         total = t["total"].format(t=round(c.total)) + who_total
     else:
         total = t["total_no_stay"].format(t=round(c.total))
-    if c.usual and c.flight_price < c.usual * 0.9:
-        total += t["cheaper"].format(x=round(100 * (1 - c.flight_price / c.usual)))
+    if c.usual and it.price < c.usual * 0.9:  # one adult's fare on both sides
+        total += t["cheaper"].format(x=round(100 * (1 - it.price / c.usual)))
     elif new:
         total += t["new"]
     lines.append(total)

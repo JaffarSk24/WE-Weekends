@@ -84,7 +84,7 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
             response: Response = error(413, "too_large")
         elif request.headers.get("transfer-encoding"):
             response = error(411, "length_required")
-        elif not limiter.allow("ip", client_ip(request)):
+        elif request.url.path != "/tg" and not limiter.allow("ip", client_ip(request)):  # the webhook is Telegram's address for every user, and has its secret
             response = error(429, "rate_limited")
         else:
             response = await call_next(request)

@@ -16,6 +16,7 @@ import secrets
 import sys
 import time
 from collections import defaultdict
+from dataclasses import replace
 from datetime import date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -23,7 +24,7 @@ from zoneinfo import ZoneInfo
 
 from .. import config as config_module
 from ..db import Database
-from ..models import GEO, UserSettings
+from ..models import GEO, load_settings
 from ..telegram import Telegram
 from . import digest as dg
 from .calendar import UserCalendar
@@ -83,6 +84,7 @@ def _flight_cost(f: Itinerary) -> float:
 CHEAPER_BY = 50  # a cheaper but worse-timed flight is mentioned from this saving on
 LOST_HOUR_EUR = 20  # half a lost day (7 h) outweighs 140€
 SHIFT_DAYS = 3
+MAX_DELIVERY_TRIES = 6  # ticks, five minutes apart
 WATCH_MIN_STAYS = 6  # fewer stay lookups than this say nothing about the sources
 
 
@@ -149,6 +151,17 @@ def family_party(fam: dict) -> tuple[int, int, int, tuple[int, ...]]:
     return adults, children, infants, ages
 
 
+def grown(adults: int, ages: tuple[int, ...]) -> int:
+    """The real adults. Airlines seat everyone from 12 as an adult, so the
+    flight party counts teenagers there; a hotel takes them as children by
+    age, and counting them in both would add a guest."""
+    return adults - sum(1 for a in ages if a >= 12)
+
+
+class Undelivered(Exception):
+    """Telegram accepted none of the messages of a digest."""
+
+
 class Engine:
     def __init__(self, cfg: config_module.Config, db: Database, tg: Telegram) -> None:
         self.cfg = cfg
@@ -162,10 +175,12 @@ class Engine:
         self.wow = WowFeed()
         self.tracked = Tracked(db)
         self.pool: dict[str, dict[str, Itinerary]] = defaultdict(dict)
-        self.searched: set[tuple[str, str]] = set()
+        self.searched: dict[tuple[str, str], dict] = {}  # what each airport and country was searched with today
         self.pool_day: date | None = None
         self.stays: dict[str, int] = defaultdict(int)  # where today's stay prices came from
+        self.holiday: dict[str, int] = defaultdict(int)  # tracked holiday hotels asked for a price, and priced
         self.warned_day = ""
+        self.undelivered: dict[tuple[int, str], int] = {}
 
     # ---------------------------------------------------------------- users
     def users(self) -> list[tuple[int, str, dict]]:
@@ -176,7 +191,7 @@ class Engine:
         out = []
         for row in rows:
             try:
-                s = json.loads(UserSettings.model_validate_json(row["settings"]).model_dump_json())
+                s = json.loads(load_settings(row["settings"]).model_dump_json())
             except ValueError:
                 continue
             out.append((int(row["chat_id"]), row["lang"], s))
@@ -189,6 +204,7 @@ class Engine:
             self.searched.clear()
             self.pool_day = today
             self.stays.clear()
+            self.holiday.clear()
             self.kiwi.purge()
         need: dict[tuple[str, str], dict] = {}
         for _, _, s in users:
@@ -204,10 +220,11 @@ class Engine:
                     n["nmax"] = max(n["nmax"], s["trip"]["nights_max"])
                     n["school"].update(school[:4])
         for pair, n in sorted(need.items()):
-            if pair in self.searched:
-                continue
+            done = self.searched.get(pair)
+            if done and done["horizon"] >= n["horizon"] and done["nmin"] <= n["nmin"] and done["nmax"] >= n["nmax"] and done["school"] >= n["school"]:
+                continue  # searched today at least this widely; a new user who needs more gets a wider search
             self._search_pair(pair[0], pair[1], n, today)
-            self.searched.add(pair)
+            self.searched[pair] = n
 
     def _add(self, items: list[Itinerary]) -> None:
         for it in items:
@@ -218,12 +235,14 @@ class Engine:
 
     def _search_pair(self, origin: str, country: str, n: dict, today: date) -> None:
         cities = self.store.route_cities(origin, country)
+        failed_before = getattr(self.kiwi, "failed", 0)
         if cities is None:
             found = self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(today + timedelta(days=1)),
                                      departureDateTo=kdate(today + timedelta(days=180)), nights_in_dst_from=1, nights_in_dst_to=7,
                                      one_for_city=True)
             cities = len({it.dest for it in found})
-            self.store.set_route(origin, country, cities)
+            if getattr(self.kiwi, "failed", 0) == failed_before:  # an outage is not "no flights there": asked again next time
+                self.store.set_route(origin, country, cities)
             self._add(found)
         if not cities:
             return
@@ -233,7 +252,7 @@ class Engine:
         weekend = {"nights_in_dst_from": 1, "nights_in_dst_to": 4, "fly_days": "4,5,6", "ret_fly_days": "0,1"}
         self._add(self.kiwi.search(country, **window, **bags, **weekend))
         self._add(self.kiwi.search(country, **window, **bags, **weekend, one_for_city=True))
-        self._add(self.kiwi.search(country, **window, **bags, nights_in_dst_from=n["nmin"], nights_in_dst_to=min(7, n["nmax"]), one_for_city=True))
+        self._add(self.kiwi.search(country, **window, **bags, nights_in_dst_from=n["nmin"], nights_in_dst_to=n["nmax"], one_for_city=True))
         for a, b in sorted(n["school"]):
             start = max(a - timedelta(days=3), today + timedelta(days=2))
             self._add(self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(start), departureDateTo=kdate(b),
@@ -275,6 +294,7 @@ class Engine:
         self.stays[stay.source] += 1
         c.hotel_price, c.hotel_name, c.hotel_rating, c.hotel_reviews = stay.price, stay.name, stay.rating, stay.reviews
         c.hotel_url, c.hotel_source, c.hotel_approx, c.hotel_place = stay.url, stay.source, stay.approx, stay.place
+        c.hotel_seller = stay.seller
 
     def _weather(self, c: Candidate) -> None:
         d = destinations().get(c.it.dest) or {}
@@ -473,7 +493,7 @@ class Engine:
                 return [t["vac_sfl_none"]]
             return []
         board = t["all_inclusive"] if offer.board in ALL_INCLUSIVE else t.get(f"board_{offer.board.lower()}", "")
-        until = dg.e(f"{date.fromisoformat(offer.until):%d.%m}") if offer.until else ""
+        until = dg.e(f"{date.fromisoformat(offer.until[:10]):%d.%m}") if offer.until else ""
         if offer.free_cancellation:
             terms = t["vac_sfl_free"].format(d=until) if until else t["vac_sfl_free_open"]
         elif offer.pay_later:
@@ -491,7 +511,7 @@ class Engine:
         v = s["blocks"]["vacation"]
         rule = v["suggest"]
         t = dg.TX[lang]
-        adults = party[0]
+        adults = grown(party[0], ages)  # for the hotel; the flight party keeps teenagers as adults
         nights = (end - start).days
         countries = {c.lower() for c in v["countries"]}
         tracked = set(v["hotels"])
@@ -542,7 +562,8 @@ class Engine:
         ex = Exclusions(s["geography"]["exclude_places"])
         mode = "family" if v["party"] == "family" else "solo"
         adults, children, infants, ages = family_party(v.get("family") or s["budgets"]["family"]) if mode == "family" else party_of(s, mode)
-        guests = adults + len(ages)
+        stay_adults = grown(adults, ages)
+        guests = stay_adults + len(ages)
         matches = []
         for url in v["hotels"]:
             if ex.hits(url.rsplit("/", 1)[-1].replace("-", " ")):
@@ -555,18 +576,24 @@ class Engine:
             if start <= today:
                 continue
             nights = (end - start).days
-            who = (t["family"] + dg.party(lang, adults, len(ages))) if mode == "family" else t["solo"]
+            who = (t["family"] + dg.party(lang, stay_adults, len(ages))) if mode == "family" else t["solo"]
             title = f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"
             lines = [title if full else f"{title}\n<i>{dg.e(t['vac_changed'])}</i>"]
-            booking_q = f"?checkin={start}&checkout={end}&group_adults={adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
+            booking_q = f"?checkin={start}&checkout={end}&group_adults={stay_adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
             for m in matches:
                 link = dg.e(m.url + booking_q)
                 country = m.url.split("/hotel/", 1)[-1][:2]
                 slug = m.url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ").title()
                 name = m.name if m.status == "found" else (v["hotel_names"].get(m.url) or slug)
                 ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or name, m.lat, m.lon, country)
-                priced, offer, total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, start, end, adults, ages)
+                priced, offer, total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, start, end, stay_adults, ages)
                 rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews) if m.status == "found" else ""
+                self.holiday["asked"] += 1
+                self.holiday["priced"] += total is not None
+                if m.lat is None and ref:  # TripAdvisor does not know the hotel: Stayforlong says where it stands
+                    spot = self.sfl.position(m.url)
+                    if spot:
+                        m = replace(m, lat=spot[0], lon=spot[1])
                 if total is None:
                     if not full:
                         continue
@@ -601,7 +628,7 @@ class Engine:
                 lines.append(line)
                 lines += offer_lines
                 lines += self._flight_lines(s, lang, m, start, end, (adults, children, infants), guests, total,
-                                            self._price_of(m.key if m.status == "found" else "", ref, lang, v, adults, ages))
+                                            self._price_of(m.key if m.status == "found" else "", ref, lang, v, stay_adults, ages))
             if not full:
                 if len(lines) > 1:
                     blocks.append("\n".join(lines))
@@ -637,6 +664,7 @@ class Engine:
         t = dg.TX[lang]
         due = self.due_blocks(s, today.isoweekday(), first)
         adults, _, _, ages = party_of(s, "family")
+        adults = grown(adults, ages)
         sections: list[tuple[str, list[Candidate]]] = []
         if "weekends" in due:
             if s["budgets"]["solo"]["enabled"]:
@@ -662,7 +690,8 @@ class Engine:
                 if c.hotel_name:
                     ids["stay"] = secrets.token_hex(6)
                     self.store.button(ids["stay"], chat_id, f"hotel:{c.hotel_name}")
-                messages.append((text[:4000], dg.buttons(lang, ids, c.mode)))
+                parts = dg.pieces(text)
+                messages += [(part, None) for part in parts[:-1]] + [(parts[-1], dg.buttons(lang, ids, c.mode))]
                 sent_items.append((f"{c.mode}:{c.it.key}", c.it.price))
         if "wow" in due:
             cap = s["blocks"]["wow"]["max_per_person_night"] * 7
@@ -673,12 +702,12 @@ class Engine:
                     price = f" · {t['from']} {d.price}€" if d.price else ""
                     lines.append(f'🔥 <a href="{dg.e(d.url)}">{dg.e(d.agency)}</a>: {dg.e(d.title)}{price}')
                     sent_items.append((f"wow:{d.id}", float(d.price or 0)))
-                messages.append(("\n\n".join(lines)[:4000], None))
+                messages += [(part, None) for part in dg.pieces("\n\n".join(lines))]
         if s["blocks"]["vacation"]["enabled"]:
             # the full block on its day, otherwise only hotel price changes
             blocks, vac_items = self.vacation(s, lang, today, full="vacation" in due, sent=sent_before)
             for block in blocks:
-                messages.append((block[:4000], None))
+                messages += [(part, None) for part in dg.pieces(block)]
             sent_items += vac_items
         return messages, sent_items
 
@@ -697,8 +726,9 @@ class Engine:
             if self.tg.send(chat_id, text, keyboard):
                 delivered += 1
             time.sleep(0.05)
-        if delivered:
-            self.store.mark_sent(chat_id, sent_items)
+        if not delivered:
+            raise Undelivered
+        self.store.mark_sent(chat_id, sent_items)
         return len(sent_items)
 
     # ------------------------------------------------------------------ loop
@@ -718,6 +748,14 @@ class Engine:
             first = not self._ever_sent(chat_id)
             try:
                 items = self.send_digest(chat_id, lang, s, today, first)
+            except Undelivered:
+                # Telegram took none of the messages: tried again on the next
+                # ticks, then given up for the day (a user who blocked the bot).
+                self.undelivered[(chat_id, day)] = self.undelivered.get((chat_id, day), 0) + 1
+                log.warning("digest not delivered, attempt %d", self.undelivered[(chat_id, day)])
+                if self.undelivered[(chat_id, day)] >= MAX_DELIVERY_TRIES:
+                    self.store.mark_digest(chat_id, day, 0)
+                continue
             except Exception:
                 log.exception("digest failed for one user")
                 continue
@@ -741,6 +779,8 @@ class Engine:
             text = t["watch_flights"]
         elif asked >= WATCH_MIN_STAYS and real * 2 < asked:
             text = t["watch_stays"].format(real=real, asked=asked)
+        elif self.holiday["asked"] >= 2 and not self.holiday["priced"]:
+            text = t["watch_holiday"].format(asked=self.holiday["asked"])
         if text:
             self.warned_day = day
             log.warning("sources: flights=%d stays=%s", sum(len(v) for v in self.pool.values()), dict(self.stays))

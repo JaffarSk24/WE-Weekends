@@ -33,6 +33,7 @@ class Candidate:
     hotel_url: str = ""
     hotel_source: str = "link"
     hotel_approx: bool = False
+    hotel_seller: str = ""
     transfer: float = 0.0
     weather: Weather | None = None
     usual: float | None = None
@@ -87,8 +88,9 @@ def score(c: Candidate, settings: dict, budget: float, ratings: dict[str, tuple[
     if c.hotel_rating:
         p += max(0.0, 9.0 - c.hotel_rating) * 8 * k("stay")
     # cheaper than usual for this route and month
-    if c.usual and c.flight_price < c.usual:
-        p -= min(40.0, 60 * (1 - c.flight_price / c.usual)) * k("discount")
+    # one adult's fare on both sides: flight_price may be the whole family's
+    if c.usual and c.it.price < c.usual:
+        p -= min(40.0, 60 * (1 - c.it.price / c.usual)) * k("discount")
     # soft ratings from the buttons, fading out over 60 days
     now = time.time()
     for aspect in (f"city:{c.it.dest}", f"country:{c.it.country}", f"out:{c.out_slot}", f"back:{c.ret_slot}"):

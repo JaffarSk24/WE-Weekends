@@ -92,6 +92,7 @@ class Kiwi:
         self.client = httpx.Client(timeout=httpx.Timeout(60.0, connect=10.0), follow_redirects=False)
         self._last = 0.0
         self.calls = 0
+        self.failed = 0  # searches that got no answer at all, as opposed to an empty one
         with db.tx() as con:
             con.execute("CREATE TABLE IF NOT EXISTS kiwi_cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, fetched_at INTEGER NOT NULL)")
 
@@ -133,6 +134,7 @@ class Kiwi:
                     log.warning("kiwi attempt %d failed: %s", attempt + 1, type(exc).__name__)
                     time.sleep(5 * (attempt + 1))
             else:
+                self.failed += 1
                 return []
             with self.db.tx() as con:
                 con.execute("INSERT OR REPLACE INTO kiwi_cache (key, body, fetched_at) VALUES (?, ?, ?)", (key, json.dumps(data), now))

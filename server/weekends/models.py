@@ -17,6 +17,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -370,3 +371,36 @@ class PauseRequest(Strict):
 
 class DeleteRequest(Strict):
     confirm: Literal["DELETE"]
+
+
+def load_settings(raw: str) -> UserSettings:
+    """Stored settings, with whatever no longer passes taken out instead of
+    the whole of them thrown away: a busy range that has grown too old, an
+    airport or a place the reference data dropped. A bad item of a list is
+    removed, a bad single value goes back to its default. Only when nothing
+    can be saved does the user see the defaults."""
+    try:
+        return UserSettings.model_validate_json(raw)
+    except ValidationError as exc:
+        problem = exc
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return UserSettings()
+    for _ in range(20):
+        cuts = {loc[:max((i for i, part in enumerate(loc) if isinstance(part, int)), default=len(loc) - 1) + 1]
+                for loc in (tuple(e["loc"]) for e in problem.errors()) if loc}
+        for loc in sorted(cuts, key=lambda c: [(isinstance(p, int), p if isinstance(p, int) else 0) for p in c], reverse=True):
+            node = data
+            try:
+                for part in loc[:-1]:
+                    node = node[part]
+                del node[loc[-1]]
+            except (KeyError, IndexError, TypeError):
+                if isinstance(data, dict):
+                    data.pop(loc[0], None)
+        try:
+            return UserSettings.model_validate(data)
+        except ValidationError as exc:
+            problem = exc
+    return UserSettings()

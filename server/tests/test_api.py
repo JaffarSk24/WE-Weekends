@@ -232,3 +232,50 @@ def test_hotel_status_lists_tracked_hotels(env, monkeypatch):
     assert res[0]["url"] == url and res[0]["status"] in ("pending", "not_found")
     s["blocks"]["vacation"]["hotel_names"] = {url: "<script>"}
     assert client.put("/v1/settings", json={"version": 1, "lang": "ru", "settings": s}, headers=auth(token)).status_code == 422
+
+
+def test_stored_settings_lose_only_what_no_longer_passes(env):
+    import json
+
+    from weekends.models import UserSettings, load_settings
+    good = json.loads(UserSettings().model_dump_json())
+    good["budgets"]["solo"]["budget_eur"] = 777
+    good["calendar"]["busy"] = [{"start": "2024-09-01", "end": "2024-09-05", "scope": "all"},  # long past: no longer accepted
+                                {"start": "2027-01-10", "end": "2027-01-12", "scope": "all"}]
+    good["profile"]["origins"] = ["BTS", "ZZZ"]  # an airport the reference data dropped
+    good["trip"]["nights_min"] = 99  # a single value out of range: back to its default
+    kept = load_settings(json.dumps(good))
+    assert kept.budgets.solo.budget_eur == 777
+    assert [str(r.start) for r in kept.calendar.busy] == ["2027-01-10"]
+    assert kept.profile.origins == ["BTS"] and kept.trip.nights_min == UserSettings().trip.nights_min
+    assert load_settings("not json").budgets.solo.budget_eur == UserSettings().budgets.solo.budget_eur
+    # the page gets the kept settings, not the defaults
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    with app.state.db.tx() as con:
+        con.execute("UPDATE users SET settings = ? WHERE chat_id = 42", (json.dumps(good),))
+    assert client.get("/v1/me", headers=auth(token)).json()["settings"]["budgets"]["solo"]["budget_eur"] == 777
+
+
+def test_deleting_the_account_removes_what_the_engine_kept(env):
+    from weekends.engine.store import Store
+    client, tg, app = env
+    login(client, app, tg, 42)
+    login(client, app, tg, 43)
+    store = Store(app.state.db)
+    for chat in (42, 43):
+        store.rate(chat, "city:NAP", 1)
+        store.mark_sent(chat, [("solo:k", 40.0)])
+        store.mark_digest(chat, "2026-11-11", 1)
+        store.button("a" * 11 + str(chat)[-1], chat, "city:NAP")
+    assert app.state.bot.users.delete(42)
+    with app.state.db.tx() as con:
+        for table in ("sent", "ratings", "digests", "buttons"):
+            assert [r["chat_id"] for r in con.execute(f"SELECT chat_id FROM {table}")] == [43], table  # noqa: S608
+
+
+def test_webhook_is_not_held_by_the_address_limit(env):
+    client, tg, app = env
+    for _ in range(130):  # more than one address may send in a minute: all of Telegram comes from one
+        r = client.post("/tg", json={}, headers={"X-Telegram-Bot-Api-Secret-Token": SECRET})
+    assert r.status_code == 200

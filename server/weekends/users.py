@@ -4,10 +4,8 @@ from __future__ import annotations
 import json
 import time
 
-from pydantic import ValidationError
-
 from .db import Database
-from .models import UserSettings
+from .models import UserSettings, load_settings
 
 
 class VersionConflict(Exception):
@@ -32,12 +30,7 @@ class Users:
                 ).fetchone()[0]
         settings = UserSettings()
         if row["settings"]:
-            try:
-                settings = UserSettings.model_validate_json(row["settings"])
-            except ValidationError:
-                # Stored settings from an older schema: fall back to defaults
-                # rather than locking the user out.
-                settings = UserSettings()
+            settings = load_settings(row["settings"])  # what no longer passes is taken out, the rest stays
         return {
             "status": row["status"],
             "waitlist_position": position,
@@ -76,6 +69,13 @@ class Users:
         with self.db.tx() as con:
             cur = con.execute("DELETE FROM users WHERE chat_id = ?", (chat_id,))
             con.execute("DELETE FROM logins WHERE chat_id = ?", (chat_id,))
+            # What the engine keeps about the user goes too: ratings, what was
+            # sent, the buttons of old digests. Its tables exist once it has run.
+            tables = {r["name"] for r in con.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            for table, sql in (("sent", "DELETE FROM sent WHERE chat_id = ?"), ("ratings", "DELETE FROM ratings WHERE chat_id = ?"),
+                               ("digests", "DELETE FROM digests WHERE chat_id = ?"), ("buttons", "DELETE FROM buttons WHERE chat_id = ?")):
+                if table in tables:
+                    con.execute(sql, (chat_id,))
             return cur.rowcount == 1
 
     def promote_waitlist(self) -> list[tuple[int, str]]:
