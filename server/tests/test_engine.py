@@ -1234,4 +1234,4 @@ def test_train_fares_come_from_the_shop_or_an_estimate(tmp_path, monkeypatch):
     j = r.journey(a, a | {"number": 2}, datetime(2026, 12, 11, 15), 2, (8,))
     assert (j.trains, j.price, j.approx) == ("REX", 11.8, False)  # the train, not the bus
     assert [p["type"] for p in sent[0]] == ["ADULT", "ADULT", "CHILD"] and sent[0][2]["birthDate"].startswith("2017")
-    assert rail.estimate((48.15, 17.11), (48.21, 16.37), 2, (8, 3)) == round(rail.km_between((48.15, 17.11), (48.21, 16.37)) * 1.25 * 0.09 * 2.5, 2)
+    assert rail.estimate((48.15, 17.11), (48.21, 16.37), 2, (8, 15)) == round(rail.km_between((48.15, 17.11), (48.21, 16.37)) * 1.25 * 0.065 * 3, 2)

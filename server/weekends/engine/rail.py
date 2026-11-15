@@ -26,7 +26,7 @@ AGENT = "WE-Weekends/1.0 (+https://github.com/JaffarSk24/WE-Weekends)"
 PAUSE = 0.6
 TTL = 12 * 3600
 STATION_KM = 30  # a station further than this from the place is no station of the place
-EUR_PER_KM = 0.09  # an estimated second-class fare, a person, when the shop has no price
+EUR_PER_KM = 0.065  # an estimated second-class fare a km for an adult, as the shop's saver fares come out
 RAIL_DETOUR = 1.25  # rails are longer than the straight line
 
 
@@ -57,8 +57,9 @@ def passengers(adults: int, ages: tuple[int, ...], on: date) -> list[dict]:
 
 
 def estimate(a: tuple[float, float], b: tuple[float, float], adults: int, ages: tuple[int, ...]) -> float:
-    """A fare from the distance: children under 6 travel free, up to 14 at half."""
-    persons = adults + sum(1 for x in ages if x >= 15) + 0.5 * sum(1 for x in ages if 6 <= x < 15)
+    """A fare from the distance. Children under 15 travel free with their
+    parents, as on the Austrian railways."""
+    persons = adults + sum(1 for x in ages if x >= 15)
     return round(km_between(a, b) * RAIL_DETOUR * EUR_PER_KM * persons, 2)
 
 
