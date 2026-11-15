@@ -181,6 +181,24 @@ class Road:
 
         return self._cached(f"geo:{lang}:{query.lower()}", ROUTE_TTL, fetch) or []
 
+    def find_hotel(self, name: str, country: str) -> list[dict]:
+        """Places to stay with this name in the country, from OpenStreetMap."""
+        query = " ".join(name.split())[:120]
+
+        def fetch():
+            r = self._get(f"{NOMINATIM}/search", params={"q": query, "format": "jsonv2", "limit": 5, "addressdetails": 1, "countrycodes": country.lower(),
+                                                        "accept-language": "en"})
+            out = []
+            for p in r.json():
+                if p.get("category") != "tourism" or p.get("type") not in ("hotel", "guest_house", "motel", "apartment", "hostel", "chalet", "resort"):
+                    continue
+                a = p.get("address") or {}
+                out.append({"name": str(p.get("name") or "")[:120], "lat": round(float(p["lat"]), 5), "lon": round(float(p["lon"]), 5),
+                            "place": str(a.get("city") or a.get("town") or a.get("village") or a.get("municipality") or "")[:80]})
+            return out
+
+        return self._cached(f"hotel:{country}:{query.lower()}", ROUTE_TTL, fetch) or []
+
     # -- roads -------------------------------------------------------------
     def route(self, a: tuple[float, float], b: tuple[float, float]) -> dict | None:
         """{km, hours, countries: [[country, km], ...]} of the fastest road."""

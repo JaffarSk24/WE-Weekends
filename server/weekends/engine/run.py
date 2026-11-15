@@ -21,6 +21,7 @@ from dataclasses import replace
 from datetime import date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from .. import config as config_module
@@ -32,6 +33,7 @@ from .calendar import UserCalendar
 from .entry import allowed, status
 from .hotels import Hotels, StayQuery, compare_link, tripadvisor_keys
 from .kiwi import Itinerary, Kiwi, kdate
+from .locate import Locator
 from .places import Exclusions
 from .rail import Rail
 from .rail import estimate as rail_estimate
@@ -39,7 +41,7 @@ from .road import Road, km_between
 from .score import Candidate, evaluate, score
 from .stayforlong import ALL_INCLUSIVE, Offer, Stayforlong
 from .store import Store
-from .tracked import Match, Tracked, nearest
+from .tracked import Match, Tracked, hotel_country, hotel_name, nearest
 from .weather import WeatherSource
 from .wow import WowFeed
 
@@ -213,9 +215,9 @@ class Engine:
         self.weather = WeatherSource(db)
         self.store = Store(db)
         self.wow = WowFeed()
-        self.tracked = Tracked(db)
         self.road = Road(db)
         self.rail = Rail(db)
+        self.tracked = Tracked(db, locate=Locator(db, self.sfl, self.road))
         self.pool: dict[str, dict[str, Itinerary]] = defaultdict(dict)
         self.searched: dict[tuple[str, str], dict] = {}  # what each airport and country was searched with today
         self.pool_day: date | None = None
@@ -452,7 +454,7 @@ class Engine:
         have none or only ones that burn a day: up to two date pairs closest
         to the wanted ones, each with the hotel's price for the new dates."""
         adults, children, infants = party
-        country = m.url.split("/hotel/", 1)[-1][:2]
+        country = hotel_country(m)
         airport = self._airport(m)
         if not airport:
             return []
@@ -477,7 +479,7 @@ class Engine:
         return out
 
     def _airport(self, m) -> str | None:
-        country = m.url.split("/hotel/", 1)[-1][:2]
+        country = hotel_country(m)
         if m.lat is None:
             return None
         return nearest(m.lat, m.lon, {c: d for c, d in destinations().items() if d.get("country", "").lower() == country})
@@ -496,7 +498,7 @@ class Engine:
         airport = self._airport(m)
         if not airport:
             return []
-        country = m.url.split("/hotel/", 1)[-1][:2]
+        country = hotel_country(m)
         lines = []
         f, cheaper = self._tracked_flight(s, airport, country, start, end, party)
         if f:
@@ -669,7 +671,7 @@ class Engine:
             for ci, co in pairs:
                 cost = 0.0
                 for m in matches:
-                    country = m.url.split("/hotel/", 1)[-1][:2]
+                    country = hotel_country(m)
                     ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or m.name, m.lat, m.lon, country)
                     total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, ci, co, stay_adults, ages)[2]
                     cost += total if total is not None else 1e6
@@ -678,7 +680,7 @@ class Engine:
             if best:
                 self.store.set_note(f"flex:{chat_id}:{v.get('id', '')}:{last}:{nights}", f"{best[0]}:{best[1]}")
             return best
-        targets = [(m.url.split("/hotel/", 1)[-1][:2].upper(), self._airport(m)) for m in matches if m.status == "found" and m.lat is not None]
+        targets = [(hotel_country(m).upper(), self._airport(m)) for m in matches if m.status == "found" and m.lat is not None]
         targets = list(dict.fromkeys(t for t in targets if t[1])) or [(c, c) for c in v["countries"]]
         found: dict[str, Itinerary] = {}
         for origin in s["profile"]["origins"]:
@@ -697,7 +699,7 @@ class Engine:
         for (ci, co), flight in sorted(by_dates.items(), key=lambda kv: kv[1])[:FLEX_PAIRS]:
             cost = flight
             for m in matches:
-                country = m.url.split("/hotel/", 1)[-1][:2]
+                country = hotel_country(m)
                 ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or m.name, m.lat, m.lon, country)
                 total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, ci, co, stay_adults, ages)[2]
                 cost += total if total is not None else 0
@@ -827,9 +829,9 @@ class Engine:
         for url in v["hotels"]:
             if ex.hits(url.rsplit("/", 1)[-1].replace("-", " ")):
                 continue
-            country = url.split("/hotel/", 1)[-1][:2]
-            m = self.tracked.resolve(url, v["hotel_names"].get(url, ""), self._geos_for(country))
-            if m.status != "found":  # a hotel taken over from the suggestions is known by its facts
+            country = url.split("/hotel/", 1)[-1][:2] if "/hotel/" in url else ""
+            m = self.tracked.resolve(url, v["hotel_names"].get(url, ""), self._geos_for(country) if country else [])
+            if m.status != "found":  # a hotel taken over from the suggestions is known by its facts, with its TripAdvisor key
                 fact = next((h for h in hotel_facts() if h["url"] == url and h.get("ta")), None)
                 if fact:
                     m = Match(url=url, status="found", key=fact["ta"], name=fact["name"], lat=fact["lat"], lon=fact["lon"])
@@ -859,10 +861,13 @@ class Engine:
                 lines.append(f"<i>{dg.e(period)}</i>")
             booking_q = f"?checkin={start}&checkout={end}&group_adults={stay_adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
             for m in matches:
-                link = dg.e(m.url + booking_q)
-                country = m.url.split("/hotel/", 1)[-1][:2]
-                slug = m.url.rsplit("/", 1)[-1].removesuffix(".html").replace("-", " ").title()
-                name = m.name if m.status == "found" else (v["hotel_names"].get(m.url) or slug)
+                if "booking.com" in m.url:
+                    link = dg.e(m.url + booking_q)
+                else:  # a hotel given by its TripAdvisor address: Booking.com searched by its name for the dates
+                    link = dg.e("https://www.booking.com/searchresults.html" + booking_q + "&" + urlencode({"ss": f"{m.name} {m.place}".strip()}))
+                country = hotel_country(m)
+                slug = hotel_name(m.url)
+                name = m.name if m.status in ("found", "located") and m.name else (v["hotel_names"].get(m.url) or slug)
                 ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or name, m.lat, m.lon, country)
                 priced, offer, total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, start, end, stay_adults, ages)
                 rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews) if m.status == "found" else ""
@@ -875,8 +880,10 @@ class Engine:
                 if total is None:
                     if not full:
                         continue
-                    if m.status != "found":
+                    if m.status == "not_found":
                         lines.append(t["vac_hotel_unknown"].format(url=link, name=dg.e(slug)))
+                    elif m.status == "located":
+                        lines.append(f'🏨 <a href="{link}">{dg.e(name)}</a>: ' + t["vac_hotel_noprice"].split(": ", 1)[-1])
                     else:
                         lines.append(t["vac_hotel_noprice"].format(url=link, name=dg.e(m.name), rating=dg.e(rating)))
                     continue

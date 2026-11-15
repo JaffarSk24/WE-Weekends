@@ -660,8 +660,14 @@ function settingsView() {
       const row = (url, i) => {
         const st = hotelStatus[url];
         const status = h('p', { class: `hotel-status ${st ? st.status : 'pending'}` });
+        // What the hotel was matched to, with where it stands, so a wrong match shows at once.
+        const checks = () => [
+          st.place ? ` · ${st.place}` : '',
+          st.lat != null ? [' · ', h('a', { href: `https://www.google.com/maps/search/?api=1&query=${st.lat},${st.lon}`, target: '_blank', rel: 'noopener noreferrer' }, t('on_map'))] : '',
+          st.ta_url ? [' · ', h('a', { href: st.ta_url, target: '_blank', rel: 'noopener noreferrer' }, 'TripAdvisor')] : ''];
         if (!st || st.status === 'pending') status.textContent = t('hotel_pending');
-        else if (st.status === 'found') status.textContent = fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 });
+        else if (st.status === 'found') status.append(fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 }), ...checks().flat());
+        else if (st.status === 'located') status.append(fmt('hotel_located', { name: st.name }), ...checks().flat());
         const alias = h('input', { type: 'text', maxlength: 100, value: trip.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
           oninput: (e) => { const v = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); if (v.trim()) trip.hotel_names[url] = v; else delete trip.hotel_names[url]; markDirty(); } });
         // Between full summaries a hotel with a price here writes only once it costs that or less.
@@ -678,7 +684,8 @@ function settingsView() {
       hotels.replaceChildren(
         trip.hotels.length ? h('div', { class: 'hotel-list' }, ...trip.hotels.map(row)) : '',
         trip.hotels.length < 10 ? h('div', { class: 'url-row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '',
-        trip.hotels.length < 10 ? h('p', { class: 'hint example' }, t('hotel_example'), ' ', h('code', {}, 'https://www.booking.com/hotel/tr/lonicera-resort-spa.html')) : '', msg);
+        trip.hotels.length < 10 ? h('p', { class: 'hint example' }, t('hotel_example'), ' ', h('code', {}, 'https://www.booking.com/hotel/tr/lonicera-resort-spa.html')) : '',
+        trip.hotels.length < 10 ? h('p', { class: 'hint' }, t('hotel_ta_hint')) : '', msg);
     };
     paintHotels();
     hotelPainters.push(paintHotels);
@@ -834,9 +841,13 @@ async function refreshHotels(tries = 0) {
   if (res.data.hotels.some((st) => st.status === 'pending') && tries < 36) hotelTimer = setTimeout(() => refreshHotels(tries + 1), 5000);
 }
 
+// A Booking.com or TripAdvisor hotel page, without its query; the server checks it again.
 function normalizeBooking(value) {
   try {
     const url = new URL(value.trim());
+    if (url.protocol === 'https:' && /^(www\.|m\.)?tripadvisor\.[a-z]{2,3}(\.[a-z]{2})?$/.test(url.hostname)) {
+      return /^\/Hotel_Review-g\d{1,9}-d\d{1,10}-Reviews-[A-Za-z0-9_.%-]{1,200}\.html$/.test(url.pathname) ? `https://www.tripadvisor.com${url.pathname}` : null;
+    }
     if (url.protocol !== 'https:' || !['www.booking.com', 'booking.com', 'm.booking.com'].includes(url.hostname)) return null;
     const path = url.pathname.toLowerCase();
     if (!/^\/hotel\/[a-z]{2}\/[a-z0-9-]{1,120}(\.[a-z]{2}(-[a-z]{2})?)?\.html$/.test(path)) return null;
@@ -845,6 +856,8 @@ function normalizeBooking(value) {
 }
 
 function hotelLabel(url) {
+  const ta = url.match(/-Reviews-([^-]+)-/);
+  if (ta) return ta[1].replace(/_/g, ' ');
   const slug = url.split('/').pop().replace('.html', '');
   return slug.replace(/-/g, ' ');
 }

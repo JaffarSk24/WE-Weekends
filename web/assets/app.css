@@ -143,7 +143,8 @@ select { min-width: 12em; }
 .hotel-list { flex-direction: column; align-items: stretch; gap: 10px; }
 .hotel-row { display: grid; gap: 6px; justify-items: start; }
 .hotel-status { margin: 0; font-size: 14px; color: var(--text-soft); }
-.hotel-status.found { color: var(--ok); }
+.hotel-status.found, .hotel-status.located { color: var(--ok); }
+.hotel-status a { color: inherit; text-decoration: underline; }
 .hotel-status.not_found { color: var(--warn); }
 .hotel-fix { display: grid; gap: 6px; width: 100%; max-width: 560px; }
 .hotel-fix input { width: 100%; }

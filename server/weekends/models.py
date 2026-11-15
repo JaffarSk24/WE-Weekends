@@ -276,12 +276,23 @@ class Wow(Block):
 _BOOKING_PATH = r"^/hotel/[a-z]{2}/[a-z0-9-]{1,120}(\.[a-z]{2}(-[a-z]{2})?)?\.html$"
 
 
+_TRIPADVISOR_HOST = r"^(www\.|m\.)?tripadvisor\.[a-z]{2,3}(\.[a-z]{2})?$"
+_TRIPADVISOR_PATH = r"^/Hotel_Review-g\d{1,9}-d\d{1,10}-Reviews-[A-Za-z0-9_.%-]{1,200}\.html$"
+
+
 def _booking_url(value: str) -> str:
-    """Accepts only a Booking hotel page and rebuilds it without query or
-    fragment. The server never fetches these URLs."""
+    """Accepts only a Booking.com or TripAdvisor hotel page and rebuilds it
+    without query or fragment, on the main domain. The server never fetches
+    these URLs: a TripAdvisor address carries the hotel's own number, which
+    prices it directly."""
     if len(value) > 2048:
         raise ValueError("URL too long")
     parts = urlsplit(value.strip())
+    host = (parts.hostname or "").lower()
+    if parts.scheme == "https" and re.fullmatch(_TRIPADVISOR_HOST, host) and parts.port is None and not parts.username and not parts.password:
+        if not re.fullmatch(_TRIPADVISOR_PATH, parts.path):
+            raise ValueError("not a TripAdvisor hotel page")
+        return "https://www.tripadvisor.com" + parts.path
     if parts.scheme != "https" or parts.hostname not in ("www.booking.com", "booking.com", "m.booking.com"):
         raise ValueError("not a booking.com link")
     if parts.port is not None or parts.username or parts.password:

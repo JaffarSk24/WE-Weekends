@@ -107,12 +107,25 @@ class Stayforlong:
         return None
 
     # -- matching ----------------------------------------------------------
+    def suggest(self, keyword: str) -> list[dict]:
+        """What the site's search box offers for the words: hotels, towns, regions."""
+        key = f"sug:{keyword.lower()[:100]}"
+        with self.db.tx() as con:
+            row = con.execute("SELECT body, fetched_at FROM sfl_cache WHERE key = ?", (key,)).fetchone()
+        if row and time.time() - row["fetched_at"] < 30 * 86400:
+            return json.loads(row["body"])
+        hits = self._request("POST", f"{GATEWAY}/v2/suggester", json={"affiliate": "stayforlong", "lang": "en", "market": "sk", "keyword": keyword[:100]})
+        if not isinstance(hits, list):
+            return []
+        with self.db.tx() as con:
+            con.execute("INSERT OR REPLACE INTO sfl_cache (key, body, fetched_at) VALUES (?, ?, ?)", (key, json.dumps(hits), int(time.time())))
+        return hits
+
     def search(self, name: str, lat: float | None, lon: float | None, country: str) -> tuple[str, str] | None:
         """(Stayforlong id, page path) of the hotel with this name: the hit
         in the same country whose name matches best, standing within 2 km.
         Without coordinates only a near-exact name does."""
-        hits = self._request("POST", f"{GATEWAY}/v2/suggester",
-                             json={"affiliate": "stayforlong", "lang": "en", "market": "sk", "keyword": name[:100]})
+        hits = self.suggest(name)
         wanted = list(words(name))
         best, best_score = None, 0.0
         for h in hits if isinstance(hits, list) else []:

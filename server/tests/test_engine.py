@@ -458,6 +458,7 @@ def test_stayforlong_search_finds_the_same_hotel(tmp_path, monkeypatch):
     sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s.sqlite")), sfl_client(lambda r: httpx.Response(200, json=hits["v"])))
     assert sfl.search("Selectum Family Resort Belek", 36.85, 31.05, "tr") == ("40494", "tr/selectum-family-resort-belek_serik")
     hits["v"] = [asteria]
+    sfl = stayforlong.Stayforlong(Database(str(tmp_path / "s2.sqlite")), sfl_client(lambda r: httpx.Response(200, json=hits["v"])))  # searches are kept a month
     assert sfl.search("Selectum Family Resort Belek", 36.85, 31.05, "tr") is None
     assert sfl.search("Selectum Family Resort Belek", 36.85, 31.05, "gr") is None
 
@@ -1235,3 +1236,75 @@ def test_train_fares_come_from_the_shop_or_an_estimate(tmp_path, monkeypatch):
     assert (j.trains, j.price, j.approx) == ("REX", 11.8, False)  # the train, not the bus
     assert [p["type"] for p in sent[0]] == ["ADULT", "ADULT", "CHILD"] and sent[0][2]["birthDate"].startswith("2017")
     assert rail.estimate((48.15, 17.11), (48.21, 16.37), 2, (8, 15)) == round(rail.km_between((48.15, 17.11), (48.21, 16.37)) * 1.25 * 0.065 * 3, 2)
+
+
+TA_URL = "https://www.tripadvisor.com/Hotel_Review-g298663-d3700591-Reviews-Vogue_Hotel_Supreme-Torba_Bodrum_District_Mugla_Province_Turkish_Aegean_Coast.html"
+
+
+def test_tripadvisor_links_are_taken_as_they_are():
+    from weekends.models import _booking_url
+    assert _booking_url(TA_URL) == TA_URL
+    assert _booking_url(TA_URL.replace("www.tripadvisor.com", "www.tripadvisor.co.uk") + "?m=19905#REVIEWS") == TA_URL
+    assert _booking_url(TA_URL.replace("www.tripadvisor.com", "www.tripadvisor.de")) == TA_URL
+    for bad in ("https://www.tripadvisor.com/Restaurant_Review-g298663-d1-Reviews-X-Y.html", "https://evil.tripadvisor.com.example/Hotel_Review-g1-d2-Reviews-X-Y.html",
+                "http://www.tripadvisor.com/Hotel_Review-g1-d2-Reviews-X-Y.html"):
+        try:
+            _booking_url(bad)
+            raise AssertionError(bad)
+        except ValueError:
+            pass
+
+
+def test_tripadvisor_link_needs_no_matching(tmp_path):
+    from weekends.db import Database
+    from weekends.engine.tracked import Tracked, hotel_country, hotel_name, ta_key
+    assert ta_key(TA_URL) == "g298663-d3700591" and hotel_name(TA_URL) == "Vogue Hotel Supreme"
+    tracked = Tracked(Database(str(tmp_path / "t.sqlite")))
+    asked = []
+
+    def hotels(geo, budget):
+        asked.append(geo)
+        return iter([{"key": "g298663-d1", "name": "Vogue Hotel Supreme Istanbul", "geo": {"latitude": 41.0, "longitude": 28.97}},
+                     {"key": "g298663-d3700591", "name": "Vogue Hotel Supreme Bodrum", "review_summary": {"rating": 4.5, "count": 2100},
+                      "geo": {"latitude": 37.0857, "longitude": 27.4535}}])
+
+    tracked._hotels = hotels
+    m = tracked.resolve(TA_URL)
+    assert (m.status, m.key, m.name, m.reviews) == ("found", "g298663-d3700591", "Vogue Hotel Supreme Bodrum", 2100)
+    assert asked == ["g298663"] and hotel_country(m) == "tr" and m.ta_url == TA_URL
+
+
+def test_booking_hotel_is_matched_only_near_its_place(tmp_path):
+    from weekends.db import Database
+    from weekends.engine.tracked import Tracked
+    url = "https://www.booking.com/hotel/it/atlantic-lignano-sabbiadoro.html"
+    spot = {"lat": 45.6798, "lon": 13.1296, "name": "Hotel Atlantic", "place": "Lignano Sabbiadoro"}
+    tracked = Tracked(Database(str(tmp_path / "t.sqlite")), locate=lambda u, alias, country: spot)
+    bologna = {"key": "g187801-d1", "name": "Hotel Atlantic Bologna", "geo": {"latitude": 44.501, "longitude": 11.343}, "url": "https://www.tripadvisor.com/b"}
+    lignano = {"key": "g194773-d2", "name": "Hotel Atlantic", "geo": {"latitude": 45.6801, "longitude": 13.1290},
+               "review_summary": {"rating": 4.3, "count": 410}, "url": "https://www.tripadvisor.com/Hotel_Review-g194773-d2-Reviews-Hotel_Atlantic-L.html"}
+    tracked.near_geos = lambda country, here: ["g194773"]
+    tracked._hotels = lambda geo, budget: iter([bologna] + ([lignano] if geo == "g194773" else []))
+    m = tracked.resolve(url)
+    assert (m.status, m.key, m.place) == ("found", "g194773-d2", "Lignano Sabbiadoro") and m.ta_url.startswith("https://www.tripadvisor.com/Hotel_Review")
+    # TripAdvisor knows only the namesake far away: the place is kept, the namesake is not taken
+    other = Tracked(Database(str(tmp_path / "u.sqlite")), locate=lambda u, alias, country: spot)
+    other.near_geos = lambda country, here: []
+    other._hotels = lambda geo, budget: iter([bologna])
+    m = other.resolve(url)
+    assert (m.status, m.key, m.lat, m.place) == ("located", "", 45.6798, "Lignano Sabbiadoro")
+
+
+def test_hotel_place_comes_from_stayforlong_with_its_town(tmp_path):
+    from weekends.db import Database
+    from weekends.engine.locate import Locator
+
+    class S:
+        def suggest(self, keyword):
+            return [{"Type": "hotel", "Country": "it", "Text": "Hotel Atlantic", "Description": "Lignano Sabbiadoro, Lignano Sabbiadoro, Friuli",
+                     "Coordinate": {"lat": 45.679817, "lon": 13.129571}},
+                    {"Type": "hotel", "Country": "it", "Text": "Hotel Atlantic", "Description": "Bologna, Bologna, Emilia-Romagna",
+                     "Coordinate": {"lat": 44.5, "lon": 11.34}}]
+
+    place = Locator(Database(str(tmp_path / "l.sqlite")), S())("https://www.booking.com/hotel/it/atlantic-hotel-lignano.html", "", "it")
+    assert (place["lat"], place["place"], place["source"]) == (45.679817, "Lignano Sabbiadoro", "stayforlong")

@@ -25,8 +25,10 @@ from .auth import Auth, AuthError, Session
 from .bot import Bot
 from .db import Database
 from .engine.hotels import tripadvisor_keys
+from .engine.locate import Locator
 from .engine.road import Road
 from .engine.run import destinations
+from .engine.stayforlong import Stayforlong
 from .engine.tracked import Tracked
 from .models import (
     DeleteRequest,
@@ -194,16 +196,17 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
         users.set_paused(session.chat_id, body.paused)
         return {"paused": body.paused}
 
-    tracked = Tracked(db)
+    road = Road(db)
+    tracked = Tracked(db, locate=Locator(db, Stayforlong(db), road))
     pending: set[tuple[str, str]] = set()
     pending_lock = threading.Lock()
 
     def resolve_in_background(url: str, alias: str) -> None:
         def work():
             try:
-                country = url.split("/hotel/", 1)[-1][:2]
+                country = url.split("/hotel/", 1)[-1][:2] if "/hotel/" in url else ""  # a TripAdvisor address carries its own key
                 keys = tripadvisor_keys()
-                geos = [keys[c] for c, d in destinations().items() if d.get("country", "").lower() == country and c in keys]
+                geos = [keys[c] for c, d in destinations().items() if country and d.get("country", "").lower() == country and c in keys]
                 tracked.resolve(url, alias, geos)
             except Exception:
                 log.exception("hotel lookup failed")
@@ -215,8 +218,6 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
                 return
             pending.add((url, alias))
         threading.Thread(target=work, daemon=True).start()
-
-    road = Road(db)
 
     @app.get("/v1/places")
     def places(request: Request, q: str = "", lang: str = "en"):
@@ -254,7 +255,9 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
                 resolve_in_background(url, alias)
                 out.append({"url": url, "status": "pending"})
             else:
-                out.append({"url": url, "status": m.status, "name": m.name, "rating": m.rating, "reviews": m.reviews})
+                out.append({"url": url, "status": m.status, "name": m.name, "rating": m.rating, "reviews": m.reviews, "place": m.place,
+                            "ta_url": m.ta_url if m.ta_url.startswith("https://www.tripadvisor.") else "",
+                            "lat": m.lat, "lon": m.lon})
         return {"hotels": out}
 
     @app.post("/v1/lang")
