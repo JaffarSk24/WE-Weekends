@@ -293,3 +293,11 @@ footer a:hover { color: var(--text); }
 }
 .hotel-row .alert { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--text-soft); }
 .hotel-row .alert-price { width: 150px; }
+.trips { display: grid; gap: 16px; }
+.trip { border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: grid; gap: 4px; }
+.trip-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.trip-head h4 { margin: 0; font-size: 18px; }
+.warn-text { color: var(--warn, #fbbf24); }
+.home-results { display: grid; gap: 6px; margin-top: 8px; }
+.home-pick { text-align: left; white-space: normal; }
+.trip input[type="text"] { width: 100%; max-width: 440px; }

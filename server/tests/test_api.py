@@ -59,12 +59,14 @@ def test_settings_roundtrip_and_conflict(env):
     me = client.get("/v1/me", headers=auth(token)).json()
     settings = me["settings"]
     settings["profile"]["origins"] = ["BTS", "VIE"]
-    settings["blocks"]["vacation"]["hotels"] = ["https://www.booking.com/hotel/tr/lonicera-resort-spa.ru.html?aid=1&x=2"]
+    settings["blocks"]["vacation"]["trips"] = [{"start": "2027-05-27", "end": "2027-06-06",
+                                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.ru.html?aid=1&x=2"]}]
     res = client.put("/v1/settings", json={"version": 0, "lang": "en", "settings": settings}, headers=auth(token))
     assert res.status_code == 200, res.text
     assert res.json()["version"] == 1
     me = client.get("/v1/me", headers=auth(token)).json()
-    assert me["settings"]["blocks"]["vacation"]["hotels"] == ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]
+    trip = me["settings"]["blocks"]["vacation"]["trips"][0]
+    assert trip["hotels"] == ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"] and len(trip["id"]) == 8
     assert me["lang"] == "en"
     stale = client.put("/v1/settings", json={"version": 0, "lang": "en", "settings": settings}, headers=auth(token))
     assert stale.status_code == 409
@@ -78,8 +80,11 @@ def test_settings_reject_bad_input(env):
         ("profile", "origins", ["XXX"]),
         ("profile", "hacked", True),
         ("budgets", "solo", {"enabled": True, "budget_eur": -5}),
-        ("blocks", "vacation", {**settings["blocks"]["vacation"], "hotels": ["https://evil.example/hotel/tr/x.html"]}),
-        ("blocks", "vacation", {**settings["blocks"]["vacation"], "hotels": ["javascript:alert(1)"]}),
+        ("blocks", "vacation", {**settings["blocks"]["vacation"], "trips": [{"start": "2027-05-27", "end": "2027-06-06", "hotels": ["https://evil.example/hotel/tr/x.html"]}]}),
+        ("blocks", "vacation", {**settings["blocks"]["vacation"], "trips": [{"start": "2027-05-27", "end": "2027-06-06", "hotels": ["javascript:alert(1)"]}]}),
+        ("blocks", "vacation", {**settings["blocks"]["vacation"], "trips": [{"start": "2027-05-27", "end": "2027-06-06", "transport": "boat"}]}),
+        ("profile", "home", {"name": "<b>x</b>", "lat": 48.1, "lon": 17.1, "country": "SK"}),
+        ("profile", "car", {"fuel": "petrol", "per_100": 99}),
         ("geography", "include", ["<script>"]),
     ]
     for section, key, value in cases:
@@ -223,14 +228,15 @@ def test_hotel_status_lists_tracked_hotels(env, monkeypatch):
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers=auth(token)).json()["settings"]
     url = "https://www.booking.com/hotel/tr/letoonia-golf-resort.html"
-    s["blocks"]["vacation"]["hotels"] = [url]
-    s["blocks"]["vacation"]["hotel_names"] = {url: "Selectum Family Resort Belek", "https://www.booking.com/hotel/tr/other.html": "x"}
+    s["blocks"]["vacation"]["trips"] = [{"start": "2027-05-27", "end": "2027-06-06", "hotels": [url],
+                                         "hotel_names": {url: "Selectum Family Resort Belek", "https://www.booking.com/hotel/tr/other.html": "x"}}]
     assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers=auth(token)).status_code == 200
-    saved = client.get("/v1/me", headers=auth(token)).json()["settings"]["blocks"]["vacation"]["hotel_names"]
+    s = client.get("/v1/me", headers=auth(token)).json()["settings"]
+    saved = s["blocks"]["vacation"]["trips"][0]["hotel_names"]
     assert saved == {url: "Selectum Family Resort Belek"}
     res = client.get("/v1/hotels", headers=auth(token)).json()["hotels"]
     assert res[0]["url"] == url and res[0]["status"] in ("pending", "not_found")
-    s["blocks"]["vacation"]["hotel_names"] = {url: "<script>"}
+    s["blocks"]["vacation"]["trips"][0]["hotel_names"] = {url: "<script>"}
     assert client.put("/v1/settings", json={"version": 1, "lang": "ru", "settings": s}, headers=auth(token)).status_code == 422
 
 
@@ -279,3 +285,31 @@ def test_webhook_is_not_held_by_the_address_limit(env):
     for _ in range(130):  # more than one address may send in a minute: all of Telegram comes from one
         r = client.post("/tg", json={}, headers={"X-Telegram-Bot-Api-Secret-Token": SECRET})
     assert r.status_code == 200
+
+
+def test_old_holiday_settings_become_trips():
+    from weekends.models import load_settings
+    old = {"blocks": {"vacation": {"enabled": True, "party": "family", "date_options": [{"start": "2027-05-27", "end": "2027-06-06"},
+                                                                                        {"start": "2027-01-03", "end": "2027-01-06"}],
+                                   "countries": ["TR"], "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"],
+                                   "family": {"adults": 2, "children": [8]}, "suggest": {"enabled": True}}}}
+    import json
+    trips = load_settings(json.dumps(old)).blocks.vacation.trips
+    assert [(str(t.start), str(t.end)) for t in trips] == [("2027-05-27", "2027-06-06"), ("2027-01-03", "2027-01-06")]
+    assert all(t.hotels == ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"] and t.countries == ["TR"] and t.family.children == [8]
+               and t.suggest.enabled and t.transport == "air" for t in trips)
+    assert trips[0].id != trips[1].id
+
+
+def test_home_address_search(env, monkeypatch):
+    from weekends.engine.road import Road
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    asked = []
+    monkeypatch.setattr(Road, "find", lambda self, q, lang: asked.append((q, lang)) or [{"name": "Trnava", "lat": 48.37, "lon": 17.58, "country": "SK"}])
+    assert client.get("/v1/places?q=Trnava&lang=ru", headers=auth(token)).json()["places"][0]["country"] == "SK"
+    assert client.get("/v1/places?q=ab&lang=ru", headers=auth(token)).json()["places"] == [] and asked == [("Trnava", "ru")]
+    assert client.get("/v1/places?q=Trnava").status_code == 401
+    for _ in range(12):
+        r = client.get("/v1/places?q=Trnava&lang=ru", headers=auth(token))
+    assert r.status_code == 429

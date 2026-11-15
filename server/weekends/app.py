@@ -25,6 +25,7 @@ from .auth import Auth, AuthError, Session
 from .bot import Bot
 from .db import Database
 from .engine.hotels import tripadvisor_keys
+from .engine.road import Road
 from .engine.run import destinations
 from .engine.tracked import Tracked
 from .models import (
@@ -215,6 +216,21 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
             pending.add((url, alias))
         threading.Thread(target=work, daemon=True).start()
 
+    road = Road(db)
+
+    @app.get("/v1/places")
+    def places(request: Request, q: str = "", lang: str = "en"):
+        """Places matching a typed address, to pick the home a car trip
+        starts from. Only text goes out, never a URL from the user."""
+        session = require_session(request)
+        if isinstance(session, JSONResponse):
+            return session
+        if not limiter.allow("places", str(session.chat_id)):
+            return error(429, "rate_limited")
+        if not 3 <= len(q.strip()) <= 120 or lang not in ("ru", "sk", "en"):
+            return {"places": []}
+        return {"places": road.find(q, lang)}
+
     @app.get("/v1/hotels")
     def hotels_status(request: Request):
         """Whether each tracked hotel was found for prices; a lookup starts in
@@ -225,10 +241,14 @@ def create_app(cfg: config_module.Config | None = None, telegram: Telegram | Non
         user = users.get(session.chat_id)
         if user is None:
             return error(401, "unauthorized")
-        vac = user["settings"]["blocks"]["vacation"]
-        out = []
-        for url in vac["hotels"]:
-            alias = vac["hotel_names"].get(url, "")
+        out, seen = [], set()
+        for trip in user["settings"]["blocks"]["vacation"]["trips"]:
+            for url in trip["hotels"]:
+                if url not in seen:
+                    seen.add(url)
+                    out += [(url, trip["hotel_names"].get(url, ""))]
+        hotels, out = out, []
+        for url, alias in hotels:
             m = tracked.stored(url, alias)
             if m is None:
                 resolve_in_background(url, alias)

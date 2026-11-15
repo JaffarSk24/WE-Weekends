@@ -152,8 +152,10 @@ class Bot:
         aspect = self.store.button_aspect(data[2:], chat_id) or ""
         answer = "track_gone"
         if aspect.startswith("track:"):
+            rest = aspect[6:]
+            trip_id, url = ("", rest) if rest.startswith("https://") else rest.split(":", 1)  # older buttons carry no trip
             try:
-                answer = "track_" + self.users.track_hotel(chat_id, aspect[6:])
+                answer = "track_" + self.users.track_hotel(chat_id, url, trip_id)
             except ValueError:  # the address no longer passes the checks
                 answer = "track_gone"
         self.tg.call("answerCallbackQuery", callback_query_id=str(query.get("id", ""))[:64], text=t(lang, answer), show_alert=answer == "track_full")

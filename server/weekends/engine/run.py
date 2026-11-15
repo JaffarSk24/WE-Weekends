@@ -33,6 +33,8 @@ from .entry import allowed, status
 from .hotels import Hotels, StayQuery, compare_link, tripadvisor_keys
 from .kiwi import Itinerary, Kiwi, kdate
 from .places import Exclusions
+from .rail import Rail
+from .road import Road, km_between
 from .score import Candidate, evaluate, score
 from .stayforlong import ALL_INCLUSIVE, Offer, Stayforlong
 from .store import Store
@@ -52,6 +54,24 @@ DUE = {"daily": {1, 2, 3, 4, 5, 6, 7}, "3w": {1, 3, 5}, "2w": {1, 4}}
 def destinations() -> dict[str, dict]:
     path = DATA / "destinations.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+
+def maps_link(a: tuple[float, float], b: tuple[float, float], how: str) -> str:
+    """The way from a to b on Google Maps, by car (driving) or by public transport (transit)."""
+    return f"https://www.google.com/maps/dir/?api=1&origin={a[0]:.5f},{a[1]:.5f}&destination={b[0]:.5f},{b[1]:.5f}&travelmode={how}"
+
+
+def place_tags(iata: str) -> tuple[str, ...]:
+    """What a destination is good for: sea, mountains, sights. A city the
+    reference data has no tags for is taken as a city to see."""
+    return tuple((destinations().get(iata) or {}).get("tags") or ()) or ("sights",)
+
+
+def wanted_place(tags: tuple[str, ...], priorities: dict) -> bool:
+    """A place is offered only for something the user cares about: one of its
+    kinds is at least "a little" interesting. "Not interesting" leaves out
+    the places that have nothing else to offer."""
+    return any(priorities.get(t, 0) > 0 for t in tags)
 
 
 def city_name(iata: str, fallback: str, lang: str) -> str:
@@ -85,7 +105,13 @@ def _flight_cost(f: Itinerary) -> float:
 CHEAPER_BY = 50  # a cheaper but worse-timed flight is mentioned from this saving on
 LOST_HOUR_EUR = 20  # half a lost day (7 h) outweighs 140€
 SHIFT_DAYS = 3
-FLEX_PAIRS = 3  # date pairs of a flexible holiday priced with the hotels
+FLEX_PAIRS = 3
+GROUND_KMH = 95  # straight-line km an hour of driving can cover at most, to ask the road only for places in reach
+MIN_DRIVE_KM = 40  # nearer than this is no trip
+TRAIN_KM = 650  # weekend cities by train: this far at most in a straight line
+TRAIN_CITIES = 12  # the nearest of them
+TRAIN_WEEKENDS = 4
+FLEX_GROUND_STARTS = 6  # start days of a flexible holiday by car or train priced with the hotels  # date pairs of a flexible holiday priced with the hotels
 MAX_DELIVERY_TRIES = 6  # ticks, five minutes apart
 WATCH_MIN_STAYS = 6  # fewer stay lookups than this say nothing about the sources
 
@@ -187,6 +213,8 @@ class Engine:
         self.store = Store(db)
         self.wow = WowFeed()
         self.tracked = Tracked(db)
+        self.road = Road(db)
+        self.rail = Rail(db)
         self.pool: dict[str, dict[str, Itinerary]] = defaultdict(dict)
         self.searched: dict[tuple[str, str], dict] = {}  # what each airport and country was searched with today
         self.pool_day: date | None = None
@@ -284,6 +312,14 @@ class Engine:
         return out
 
     def _family_price(self, it: Itinerary, s: dict) -> float | None:
+        if it.mode == "car":
+            return it.price  # the car costs the same whoever sits in it
+        if it.mode == "train":
+            adults, _, _, ages = party_of(s, "family")
+            d = destinations()[it.dest]
+            go, back = self._rail_pair(s, (d["city"], (d["lat"], d["lon"])), it.depart.replace(minute=0), it.ret_depart.replace(minute=0),
+                                       grown(adults, ages), ages)
+            return round(go.price + back.price, 2) if go and back else None
         adults, children, infants, _ = party_of(s, "family")
         found = self.kiwi.search(it.country, flyFrom=it.origin, flyTo=it.dest, departureDate=kdate(it.depart.date()),
                                  returnDate=kdate(it.ret_depart.date()), adults=adults, children=children, infants=infants,
@@ -325,8 +361,12 @@ class Engine:
         sent = self.store.last_sent(chat_id)
         nights = (s["trip"]["nights_min"], s["trip"]["nights_max"])
         transfer = (50 if family else 30) if s["budgets"]["include_transfer"] else 0
-        pool = [it for o in s["profile"]["origins"] for it in self.pool.get(o, {}).values()
-                if it.country in countries and not ex.destination(it.dest, city_name(it.dest, it.city, "en"))]
+        if mode != "diamond" and s["blocks"]["weekends"].get("transport", "air") != "air":
+            found = self._ground_pool(s, today)  # by car or by train from home: no airport transfer
+            transfer = 0
+        else:
+            found = [it for o in s["profile"]["origins"] for it in self.pool.get(o, {}).values()]
+        pool = [it for it in found if it.country in countries and not ex.destination(it.dest, city_name(it.dest, it.city, "en"))]
         cands = []
         for it in pool:
             r = evaluate(it, cal, family, nights, today, s["trip"]["horizon_days"])
@@ -337,8 +377,11 @@ class Engine:
                     continue
             elif not family and it.price + transfer > budget:
                 continue
+            tags = place_tags(it.dest)
+            if mode != "diamond" and not wanted_place(tags, s["priorities"]):  # cheap tickets go anywhere, trips where the user wants
+                continue
             c = Candidate(it=it, mode=mode, flight_price=it.price, entry=countries[it.country],
-                          tags=tuple((destinations().get(it.dest) or {}).get("tags", ())), workdays_lost=r[0],
+                          tags=tags, workdays_lost=r[0],
                           school_days_lost=r[1], out_slot=r[2], ret_slot=r[3], transfer=0 if mode == "diamond" else transfer)
             c.usual = self.store.usual_price(f"{it.origin}-{it.dest}", f"{it.depart:%Y-%m}")
             c.penalty = score(c, s, budget if mode != "diamond" else s["blocks"]["diamonds"]["max_price_eur"], ratings)
@@ -439,11 +482,16 @@ class Engine:
         return nearest(m.lat, m.lon, {c: d for c, d in destinations().items() if d.get("country", "").lower() == country})
 
     def _flight_lines(self, s: dict, lang: str, m, start: date, end: date, party: tuple[int, int, int], guests: int, hotel_total: float,
-                      price_of=None) -> list[str]:
+                      price_of=None, transport: str = "air", ages: tuple[int, ...] = ()) -> list[str]:
         """The flight under a hotel: the pair that keeps most of the holiday,
         a clearly cheaper one, and nearby dates when the exact ones have no
-        direct flight or only ones that burn half a day or more."""
+        direct flight or only ones that burn half a day or more. By train or
+        by car: the journey from home and its cost instead."""
         t = dg.TX[lang]
+        if transport == "car":
+            return self._car_lines(s, lang, m, hotel_total)
+        if transport == "train":
+            return self._train_lines(s, lang, m, start, end, grown(party[0], ages), ages, hotel_total)
         airport = self._airport(m)
         if not airport:
             return []
@@ -480,6 +528,113 @@ class Engine:
                 lines.append(line)
         return lines
 
+    def _home(self, s: dict) -> tuple[float, float] | None:
+        home = s["profile"].get("home")
+        return (home["lat"], home["lon"]) if home else None
+
+    def _car_lines(self, s: dict, lang: str, m, hotel_total: float) -> list[str]:
+        """The road from home to the hotel and the fuel or the electricity for
+        it there and back, priced by the countries it runs through."""
+        t = dg.TX[lang]
+        here = self._home(s)
+        if here is None:
+            return [t["vac_no_home"]]
+        route = self.road.route(here, (m.lat, m.lon)) if m.lat is not None else None
+        car = s["profile"]["car"]
+        one_way = self.road.cost(car, route, s["profile"]["home"]["country"]) if route else None
+        if one_way is None:
+            return [t["vac_no_road"]]
+        url = maps_link(here, (m.lat, m.lon), "driving")
+        return [t["vac_car"].format(url=dg.e(url), km=round(route["km"]), h=dg.e(dg.duration(lang, route["hours"])),
+                                    fuel=dg.e(t["fuel"][car["fuel"]]), p=round(one_way * 2)),
+                t["vac_total"].format(t=round(hotel_total + one_way * 2)), t["car_note"]]
+
+    def _train_lines(self, s: dict, lang: str, m, start: date, end: date, adults: int, ages: tuple[int, ...], hotel_total: float) -> list[str]:
+        """The train from home to the town nearest the hotel and back, with
+        its price for the party."""
+        t = dg.TX[lang]
+        here = self._home(s)
+        airport = self._airport(m) if m.lat is not None else None
+        if here is None or airport is None:
+            return [t["vac_no_home"] if here is None else t["vac_no_train"]]
+        d = destinations()[airport]
+        out, back = self._rail_pair(s, (d["city"], (d["lat"], d["lon"])), datetime.combine(start, datetime.min.time()).replace(hour=6),
+                                    datetime.combine(end, datetime.min.time()).replace(hour=9), adults, ages)
+        if out is None or back is None:
+            return [t["vac_no_train"]]
+        changes = f"{out.changes}/{back.changes}"
+        chg = t["train_chg"].format(n=changes) if changes != "0/0" else ""
+        url = maps_link(here, (d["lat"], d["lon"]), "transit")
+        price = out.price + back.price
+        return [t["vac_train"].format(url=dg.e(url), trains=dg.e(", ".join(dict.fromkeys(f"{out.trains}, {back.trains}".split(", ")))),
+                                      o=dg.e(f"{out.depart:%d.%m %H:%M}"), r=dg.e(f"{back.depart:%d.%m %H:%M}"), chg=dg.e(chg), p=round(price),
+                                      approx=t["approx_fare"] if out.approx or back.approx else ""),
+                t["vac_total"].format(t=round(hotel_total + price))]
+
+    def _rail_pair(self, s: dict, place: tuple[str, tuple[float, float]], out_after: datetime, back_after: datetime, adults: int,
+                   ages: tuple[int, ...]):
+        """The train there and the train back between home and a place."""
+        home = s["profile"]["home"]
+        here = (home["lat"], home["lon"])
+        a = self.rail.station(home["name"].split(",")[0].strip(), here)
+        b = self.rail.station(place[0], place[1])
+        if a is None or b is None or a["number"] == b["number"]:
+            return None, None
+        out = self.rail.journey(a, b, out_after, adults, ages)
+        back = self.rail.journey(b, a, back_after, adults, ages) if out else None
+        return out, back
+
+    def _ground_pool(self, s: dict, today: date) -> list[Itinerary]:
+        """Weekend trips from home by car or by train, shaped like flights so
+        the same rules rank them: the cities within reach, each weekend of
+        the horizon (by train the next four), out on Friday after work, back
+        on Sunday."""
+        w = s["blocks"]["weekends"]
+        home = s["profile"].get("home")
+        if not home:
+            return []
+        here = (home["lat"], home["lon"])
+        countries = allowed_countries(s)
+        places = {c: (d["lat"], d["lon"]) for c, d in destinations().items()
+                  if d.get("lat") is not None and str(d.get("country", "")).upper() in countries}
+        fridays = [today + timedelta(days=(4 - today.weekday()) % 7 + 7 * k) for k in range(26)]
+        fridays = [f for f in fridays if f > today and (f - today).days <= s["trip"]["horizon_days"]]
+        out: list[Itinerary] = []
+        if w["transport"] == "car":
+            reach = w["max_drive_hours"]
+            near = {c: p for c, p in places.items() if km_between(here, p) <= reach * GROUND_KMH}
+            roads = self.road.around(here, near) if near else {}
+            car = s["profile"]["car"]
+            for code, (km, hours) in sorted(roads.items()):
+                if hours > reach or km < MIN_DRIVE_KM:
+                    continue
+                one_way = self.road.cost(car, self.road.route(here, near[code]), home["country"])
+                if one_way is None:
+                    continue
+                d = destinations()[code]
+                for fri in fridays:
+                    start = datetime.combine(fri, datetime.min.time()).replace(hour=17)
+                    back = datetime.combine(fri + timedelta(days=2), datetime.min.time()).replace(hour=15)
+                    out.append(Itinerary(origin="HOME", dest=code, city=d["city"], country=str(d["country"]).upper(), price=round(one_way * 2, 2),
+                                         depart=start, arrive=start + timedelta(hours=hours), ret_depart=back, back=back + timedelta(hours=hours),
+                                         airline=car["fuel"], flights="", url=maps_link(here, near[code], "driving"), image="",
+                                         mode="car", km=km, hours=hours))
+            return out
+        near = sorted((km_between(here, p), c) for c, p in places.items() if MIN_DRIVE_KM <= km_between(here, p) <= TRAIN_KM)[:TRAIN_CITIES]
+        for _, code in near:
+            d = destinations()[code]
+            for fri in fridays[:TRAIN_WEEKENDS]:
+                go, back = self._rail_pair(s, (d["city"], places[code]), datetime.combine(fri, datetime.min.time()).replace(hour=15),
+                                           datetime.combine(fri + timedelta(days=2), datetime.min.time()).replace(hour=13), 1, ())
+                if go is None or back is None:
+                    continue
+                trains = ", ".join(dict.fromkeys(f"{go.trains}, {back.trains}".split(", ")))
+                out.append(Itinerary(origin="HOME", dest=code, city=d["city"], country=str(d["country"]).upper(), price=round(go.price + back.price, 2),
+                                     depart=go.depart, arrive=go.arrive, ret_depart=back.depart, back=back.arrive, airline=trains[:40], flights="",
+                                     url=maps_link(here, places[code], "transit"), image="", mode="train", approx=go.approx or back.approx,
+                                     changes=f"{go.changes}/{back.changes}"))
+        return out
+
     def _flex_dates(self, s: dict, v: dict, lang: str, matches: list, first: date, last: date, party: tuple[int, int, int], stay_adults: int,
                     ages: tuple[int, ...], chat_id: int | None, full: bool) -> tuple[date, date] | None:
         """The cheapest stay of the wanted length inside a period: the
@@ -490,12 +645,30 @@ class Engine:
         nights = v["flex_nights"]
         if (last - first).days < nights:
             return None
-        kept = None if full else self.store.note(f"flex:{chat_id}:{last}:{nights}")
+        kept = None if full else self.store.note(f"flex:{chat_id}:{v.get('id', '')}:{last}:{nights}")
         if kept:
             a, b = (date.fromisoformat(x) for x in kept.split(":"))
             if a > first:
                 return a, b
         adults, children, infants = party
+        if v.get("transport", "air") != "air":
+            # by car or train the way costs about the same any day: the hotels decide, a few start days across the period
+            span = (last - first).days - nights
+            starts = sorted({first + timedelta(days=round(span * k / (FLEX_GROUND_STARTS - 1))) for k in range(FLEX_GROUND_STARTS)})
+            pairs = [(d, d + timedelta(days=nights)) for d in starts]
+            best, best_cost = None, 0.0
+            for ci, co in pairs:
+                cost = 0.0
+                for m in matches:
+                    country = m.url.split("/hotel/", 1)[-1][:2]
+                    ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or m.name, m.lat, m.lon, country)
+                    total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, ci, co, stay_adults, ages)[2]
+                    cost += total if total is not None else 1e6
+                if best is None or cost < best_cost:
+                    best, best_cost = (ci, co), cost
+            if best:
+                self.store.set_note(f"flex:{chat_id}:{v.get('id', '')}:{last}:{nights}", f"{best[0]}:{best[1]}")
+            return best
         targets = [(m.url.split("/hotel/", 1)[-1][:2].upper(), self._airport(m)) for m in matches if m.status == "found" and m.lat is not None]
         targets = list(dict.fromkeys(t for t in targets if t[1])) or [(c, c) for c in v["countries"]]
         found: dict[str, Itinerary] = {}
@@ -522,7 +695,7 @@ class Engine:
             if best is None or cost < best_cost:
                 best, best_cost = (ci, co), cost
         if best:
-            self.store.set_note(f"flex:{chat_id}:{last}:{nights}", f"{best[0]}:{best[1]}")
+            self.store.set_note(f"flex:{chat_id}:{v.get('id', '')}:{last}:{nights}", f"{best[0]}:{best[1]}")
         return best
 
     def _holiday_price(self, key: str, ref: tuple[str, str] | None, lang: str, v: dict, ci: date, co: date, adults: int, ages: tuple[int, ...]
@@ -561,19 +734,19 @@ class Engine:
         return [t["vac_sfl"].format(url=dg.e(offer.url), p=offer.total, board=dg.e(f", {board}" if board else ""), terms=terms)]
 
     def _suggestions(self, s: dict, lang: str, start: date, end: date, party: tuple[int, int, int], ages: tuple[int, ...], ex: Exclusions,
-                     shown: list[tuple[str, str]] | None = None) -> list[str]:
+                     shown: list[tuple[str, str]] | None = None, trip: dict | None = None) -> list[str]:
         """Hotels picked by the user's rules from the hotel facts: countries
         of the holiday, stars, all inclusive, water park, review score, and a
         price for the whole stay within the limit, from TripAdvisor or
         Stayforlong, whichever is lower. Cheapest first, a water park counts
         as a tenth off. Each comes with its flight and the total."""
-        v = s["blocks"]["vacation"]
+        v = trip if trip is not None else s["blocks"]["vacation"]
         rule = v["suggest"]
         t = dg.TX[lang]
         adults = grown(party[0], ages)  # for the hotel; the flight party keeps teenagers as adults
         nights = (end - start).days
         countries = {c.lower() for c in v["countries"]}
-        tracked = set(v["hotels"])
+        tracked = set(v.get("hotels") or [])
         picked = []
         for h in hotel_facts():
             if h["cc"] not in countries or h["url"] in tracked or not (h.get("ta") or h.get("sfl")):
@@ -605,7 +778,8 @@ class Engine:
             line += t["compare"].format(url=dg.e(compare_link(short_name(h["name"]), h.get("city", ""), start, end, adults, ages, lang)))
             m = Match(url=h["url"], status="found", key=h.get("ta", ""), name=h["name"], lat=h["lat"], lon=h["lon"])
             group = [line, *self._offer_lines(lang, v, ref, offer),
-                     *self._flight_lines(s, lang, m, start, end, party, adults + len(ages), total, self._price_of(h.get("ta", ""), ref, lang, v, adults, ages))]
+                     *self._flight_lines(s, lang, m, start, end, party, adults + len(ages), total, self._price_of(h.get("ta", ""), ref, lang, v, adults, ages),
+                                         v.get("transport", "air"), ages)]
             if len("\n".join(lines + group)) > MESSAGE_ROOM:  # whole hotels only, never a cut tag
                 break
             lines += group
@@ -615,16 +789,27 @@ class Engine:
 
     def vacation(self, s: dict, lang: str, today: date, full: bool = True, sent: dict[str, float] | None = None,
                  chat_id: int | None = None) -> tuple[list[str], list[tuple[str, float]]]:
+        """Every trip of the holiday block on its own: its dates, transport,
+        party, places, hotels and suggestions."""
+        blocks: list[str] = []
+        items: list[tuple[str, float]] = []
+        for trip in s["blocks"]["vacation"]["trips"]:
+            b, i = self._trip(s, trip, lang, today, full, sent or {}, chat_id)
+            blocks += b
+            items += i
+        return blocks, items
+
+    def _trip(self, s: dict, v: dict, lang: str, today: date, full: bool, sent: dict[str, float],
+              chat_id: int | None) -> tuple[list[str], list[tuple[str, float]]]:
         """The holiday block. full: everything (on the user's day). Otherwise
         only tracked hotels whose price moved by 3% or more since it was last
         sent, or that were never sent, so a price change is never missed. A
         hotel with a price alert keeps quiet until its price is at or under
         it. With a chat, suggested hotels get a button to track them."""
-        sent = sent or {}
         sent_items: list[tuple[str, float]] = []
-        v = s["blocks"]["vacation"]
         t = dg.TX[lang]
-        ex = Exclusions(s["geography"]["exclude_places"])
+        ex = Exclusions(list(s["geography"]["exclude_places"]) + list(v.get("exclude_places") or []))
+        transport = v.get("transport", "air")
         mode = "family" if v["party"] == "family" else "solo"
         adults, children, infants, ages = family_party(v.get("family") or s["budgets"]["family"]) if mode == "family" else party_of(s, mode)
         stay_adults = grown(adults, ages)
@@ -641,8 +826,8 @@ class Engine:
                     m = Match(url=url, status="found", key=fact["ta"], name=fact["name"], lat=fact["lat"], lon=fact["lon"])
             matches.append(m)
         blocks = []
-        for opt in v["date_options"]:
-            start, end = date.fromisoformat(opt["start"]), date.fromisoformat(opt["end"])
+        for opt in [{"start": v["start"], "end": v["end"]}]:
+            start, end = date.fromisoformat(str(opt["start"])), date.fromisoformat(str(opt["end"]))
             period = ""
             if v.get("flexible") and (end - start).days > v["flex_nights"]:
                 # the dates are a period: the cheapest stay of the wanted length inside it
@@ -651,14 +836,15 @@ class Engine:
                                         chat_id, full)
                 if best is None:
                     if full:
-                        blocks.append(f"🌴 <b>{dg.e(t['vacation'])}</b>\n{dg.e(period)}\n{dg.e(t['vac_flex_none'])}")
+                        blocks.append(f"🌴 <b>{dg.e(v.get('name') or t['vacation'])}</b>\n{dg.e(period)}\n{dg.e(t['vac_flex_none'])}")
                     continue
                 start, end = best
             if start <= today:
                 continue
             nights = (end - start).days
             who = (t["family"] + dg.party(lang, stay_adults, len(ages))) if mode == "family" else t["solo"]
-            title = f"🌴 <b>{dg.e(t['vacation'])}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"
+            label = f"{t['vacation']} «{v['name']}»" if v.get("name") else t["vacation"]
+            title = f"🌴 <b>{dg.e(label)}: {dg.e(t['vac_option'].format(a=dg.day(lang, start), b=dg.day(lang, end), who=who))}</b>"
             lines = [title if full else f"{title}\n<i>{dg.e(t['vac_changed'])}</i>"]
             if period:
                 lines.append(f"<i>{dg.e(period)}</i>")
@@ -719,13 +905,13 @@ class Engine:
                 lines.append(line)
                 lines += offer_lines
                 lines += self._flight_lines(s, lang, m, start, end, (adults, children, infants), guests, total,
-                                            self._price_of(m.key if m.status == "found" else "", ref, lang, v, stay_adults, ages))
+                                            self._price_of(m.key if m.status == "found" else "", ref, lang, v, stay_adults, ages), transport, ages)
             if not full:
                 if len(lines) > 1:
                     blocks.append("\n".join(lines))
                 continue
             flights = []
-            for origin in s["profile"]["origins"]:
+            for origin in s["profile"]["origins"] if transport == "air" else []:  # other direct flights: by air only
                 for country in v["countries"]:
                     for times in ({}, {"dtime_to": 11, "ret_dtime_from": 16}, {"dtime_to": 6, "ret_dtime_from": 16}):  # one per city: the cheapest, the well-timed, the night ones
                         flights += self.kiwi.search(country, flyFrom=origin, flyTo=country, departureDate=kdate(start), returnDate=kdate(end),
@@ -743,17 +929,17 @@ class Engine:
                 url = f.url if f.url.startswith("https://") else "https://www.kiwi.com/"
                 lines.append(f'{dg.flag(f.country)} <a href="{dg.e(url)}">{dg.e(name)}</a> {dg.e(f.dest)}, {dg.e(f.airlines)}: '
                              f"{dg.e(dg.when(lang, f.depart))} / {dg.e(dg.when(lang, f.ret_depart))} · <b>{round(f.price)}€</b>")
-            if v["countries"] and not flights:
+            if v["countries"] and not flights and transport == "air":
                 lines.append(t["vac_no_flights"])
             blocks.append("\n".join(lines))
             if v["suggest"]["enabled"]:  # a message of its own, it is long with the flights
                 shown: list[tuple[str, str]] = []
-                block = Block("\n".join([title] + self._suggestions(s, lang, start, end, (adults, children, infants), ages, ex, shown)))
+                block = Block("\n".join([title] + self._suggestions(s, lang, start, end, (adults, children, infants), ages, ex, shown, v)))
                 if chat_id is not None and shown:
                     block.buttons = []
                     for name, url in shown:  # one button a hotel: it joins the tracked ones
                         button_id = secrets.token_hex(6)
-                        self.store.button(button_id, chat_id, f"track:{url}")
+                        self.store.button(button_id, chat_id, f"track:{v.get('id', '')}:{url}")
                         block.buttons.append([{"text": f"➕ {short_name(name)}"[:60], "callback_data": f"t:{button_id}"}])
                 blocks.append(block)
         return blocks, sent_items

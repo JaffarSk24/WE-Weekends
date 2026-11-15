@@ -15,6 +15,7 @@ RULES: dict[str, list[tuple[int, int]]] = {
     "save": [(10, 60), (120, 3600)],
     "chat": [(20, 60), (200, 3600)],
     "login_chat": [(5, 600), (20, 86400)],
+    "places": [(10, 60), (60, 3600)],  # address search: the public OSM server asks for little traffic
 }
 
 _MAX_KEYS = 100_000

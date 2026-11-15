@@ -472,6 +472,67 @@ function rangeList(list, max, withScope) {
   return box;
 }
 
+// A day as YYYY-MM-DD in the user's own time, some days from today.
+function localDay(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function shiftDay(day, days) {
+  const [y, m, d] = day.split('-').map(Number);
+  const x = new Date(y, m - 1, d + days);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+}
+
+function transportOptions() {
+  return [['air', t('tr_air')], ['train', t('tr_train')], ['car', t('tr_car')]];
+}
+
+// Where car and train trips start: searched by the server, picked from the list.
+function homePicker(profile) {
+  const box = h('div', { class: 'home' });
+  const paint = (found, error) => {
+    if (profile.home && !found) {
+      box.replaceChildren(h('span', { class: 'tag big' }, profile.home.name,
+        h('button', { type: 'button', 'aria-label': t('remove'), onclick: () => { profile.home = null; paint(); markDirty(); } }, '×')));
+      return;
+    }
+    const input = h('input', { type: 'text', maxlength: 120, placeholder: t('home_ph'), 'aria-label': t('home') });
+    const search = async () => {
+      const q = input.value.trim();
+      if (q.length < 3) return;
+      const res = await api('GET', `/v1/places?q=${encodeURIComponent(q)}&lang=${lang}`);
+      paint(res.ok ? res.data.places : [], res.ok ? (res.data.places.length ? '' : t('home_none')) : errorText(res));
+    };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+    box.replaceChildren(h('div', { class: 'url-row' }, input, h('button', { type: 'button', class: 'btn small', onclick: search }, t('find'))),
+      found && found.length ? h('div', { class: 'home-results' }, ...found.map((place) => h('button', { type: 'button', class: 'btn small home-pick',
+        onclick: () => { profile.home = place; paint(); markDirty(); } }, place.name))) : '',
+      error ? h('p', { class: 'error small', role: 'alert' }, error) : '');
+  };
+  paint();
+  return box;
+}
+
+// The car: fuel, consumption, and the user's own price if they know it.
+function carSettings(car) {
+  const unit = () => (car.fuel === 'electric' ? t('unit_kwh') : t('unit_l'));
+  const perBox = h('span', {});
+  const priceBox = h('span', {});
+  const paint = () => {
+    perBox.replaceChildren(numberInput(car, 'per_100', 1, 40, 0.1, `${unit()} / 100 ${t('km')}`));
+    const own = h('input', { type: 'number', min: 0.05, max: 5, step: 0.01, inputmode: 'decimal', value: car.price ?? '', placeholder: t('car_price_ph'),
+      oninput: (e) => { const v = Number(e.target.value); car.price = e.target.value !== '' && v >= 0.05 && v <= 5 ? Math.round(v * 100) / 100 : null; markDirty(); } });
+    priceBox.replaceChildren(h('span', { class: 'with-suffix' }, own, h('span', { class: 'suffix' }, `€ / ${unit()}`)));
+  };
+  paint();
+  return h('div', {},
+    group(t('car_fuel'), segmented(car, 'fuel', [['petrol', t('fuel_petrol')], ['diesel', t('fuel_diesel')], ['electric', t('fuel_electric')]], paint)),
+    h('div', { class: 'two' }, field(t('car_per_100'), perBox), field(t('car_price'), priceBox)),
+    h('p', { class: 'hint' }, t('car_hint')));
+}
+
 function panel(title, intro, ...body) {
   return h('div', { class: 'panel' }, h('h2', {}, title), intro ? h('p', { class: 'intro' }, intro) : null, body);
 }
@@ -495,7 +556,10 @@ function settingsView() {
     h('div', { class: 'two' },
       group(t('citizenship'), countrySingle(s.profile, 'citizenship', null, t('add_country'))),
       group(t('residence'), countrySingle(s.profile, 'eu_residence', geo.eu_residence, t('residence_none')))),
-    h('p', { class: 'hint' }, t('residence_hint')));
+    h('p', { class: 'hint' }, t('residence_hint')),
+    h('h3', {}, t('s_home')),
+    group(t('home'), homePicker(s.profile), t('home_hint')),
+    carSettings(s.profile.car));
 
   // 2. Where
   const prio = (key) => h('div', { class: 'prio-row' }, h('span', { class: 'prio-label' }, t(key)), segmented(s.priorities, key, t('prio').map((label, i) => [i, label])));
@@ -566,80 +630,117 @@ function settingsView() {
       sw), body);
     return card;
   };
+  // Holiday trips: each on its own dates with its own transport, party, places, hotels and suggestions.
   const vac = s.blocks.vacation;
-  const hotels = h('div', { class: 'hotels' });
-  const paintHotels = (polled) => {
-    // The status poll repaints every few seconds: not while the user types here,
-    // and never at the cost of an address typed but not added yet.
-    if (polled === true && hotels.contains(document.activeElement)) return;
-    const typed = hotels.querySelector('.url-row input');
-    const input = h('input', { type: 'url', inputmode: 'url', placeholder: t('hotel_placeholder'), 'aria-label': t('hotel_url'), value: polled === true && typed ? typed.value : '' });
-    const msg = h('p', { class: 'error small', role: 'alert' });
-    const add = () => {
-      const url = normalizeBooking(input.value);
-      if (!url) { msg.textContent = /booking\.com\/share-/i.test(input.value) ? t('hotel_share') : t('hotel_bad'); return; }
-      if (!vac.hotels.includes(url) && vac.hotels.length < 10) { vac.hotels.push(url); markDirty(); }
-      paintHotels();
-    };
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
-    const row = (url, i) => {
-      const st = hotelStatus[url];
-      const status = h('p', { class: `hotel-status ${st ? st.status : 'pending'}` });
-      if (!st || st.status === 'pending') status.textContent = t('hotel_pending');
-      else if (st.status === 'found') status.textContent = fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 });
-      const alias = h('input', { type: 'text', maxlength: 100, value: vac.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
-        oninput: (e) => { const v = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); if (v.trim()) vac.hotel_names[url] = v; else delete vac.hotel_names[url]; markDirty(); } });
-      // Between full summaries a hotel with a price here writes only once it costs that or less.
-      const alert = h('input', { type: 'number', min: 50, max: 50000, step: 10, inputmode: 'numeric', class: 'alert-price', value: vac.price_alerts[url] || '',
-        placeholder: t('alert_placeholder'), 'aria-label': t('alert_label'),
-        oninput: (e) => { const v = Math.round(Number(e.target.value)); if (v >= 50 && v <= 50000) vac.price_alerts[url] = v; else delete vac.price_alerts[url]; markDirty(); } });
-      return h('div', { class: 'hotel-row' },
-        h('span', { class: 'tag' },
-          h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
-          h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { vac.hotels.splice(i, 1); delete vac.hotel_names[url]; delete vac.price_alerts[url]; paintHotels(); markDirty(); } }, '×')),
-        h('label', { class: 'alert' }, t('alert_label'), alert, h('span', { class: 'muted' }, '€')),
-        st && st.status === 'not_found' ? h('div', { class: 'hotel-fix' }, h('p', { class: 'hotel-status not_found' }, t('hotel_not_found')), alias) : status);
-    };
-    hotels.replaceChildren(
-      vac.hotels.length ? h('div', { class: 'hotel-list' }, ...vac.hotels.map(row)) : '',
-      vac.hotels.length < 10 ? h('div', { class: 'url-row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '',
-      vac.hotels.length < 10 ? h('p', { class: 'hint example' }, t('hotel_example'), ' ', h('code', {}, 'https://www.booking.com/hotel/tr/lonicera-resort-spa.html')) : '', msg);
+  hotelPainters.length = 0;
+  const tripsBox = h('div', { class: 'trips' });
+  const newTrip = () => {
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('');
+    const day = localDay(30);
+    return { id, name: '', start: day, end: localDay(37), transport: 'air', party: 'family', family: { adults: fam.adults, children: [...fam.children] },
+      countries: [], exclude_places: [], hotels: [], hotel_names: {}, price_alerts: {}, free_cancellation: false, pay_later: false, flexible: false,
+      flex_nights: 10, suggest: { enabled: false, max_hotel_eur: 3500, min_stars: 5, all_inclusive: true, aquapark: false, min_rating: 8.5 } };
   };
-  paintHotels();
-  refreshHotels(paintHotels);
-  hotelsRefresh = () => refreshHotels(paintHotels);
-  // The holiday has its own family, apart from family weekends.
-  const vfam = vac.family || (vac.family = { adults: fam.adults, children: [...fam.children] });
-  const vacFamily = h('div', { class: 'sub', hidden: vac.party !== 'family' },
-    group(t('adults'), stepper(vfam, 'adults', 1, 6, t('adults'))),
-    group(t('children'), kidsEditor(vfam.children)),
-    h('p', { class: 'hint' }, t('vac_family_hint')));
-  if (!vac.price_alerts) vac.price_alerts = {};
-  const flexBox = h('div', { class: 'sub', hidden: !vac.flexible },
-    group(t('flex_nights'), stepper(vac, 'flex_nights', 3, 21, t('flex_nights'))),
-    h('p', { class: 'hint' }, t('flex_hint')));
-  const sug = vac.suggest;
-  const sugBox = h('div', { class: 'sub', hidden: !sug.enabled },
-    h('div', { class: 'two' },
-      field(t('suggest_max'), numberInput(sug, 'max_hotel_eur', 100, 50000, 1, '€')),
-      group(t('min_stars'), segmented(sug, 'min_stars', [[0, t('stars_any')], [3, '3+'], [4, '4+'], [5, '5']]))),
-    group(t('min_rating'), segmented(sug, 'min_rating', [[7.5, '7.5+'], [8, '8+'], [8.5, '8.5+'], [9, '9+']])),
-    toggle(sug, 'all_inclusive', t('all_inclusive')), toggle(sug, 'aquapark', t('aquapark')),
-    h('p', { class: 'hint' }, t('suggest_beach')));
+  const tripCard = (trip, index) => {
+    const hotels = h('div', { class: 'hotels' });
+    const paintHotels = (polled) => {
+      // The status poll repaints every few seconds: not while the user types here,
+      // and never at the cost of an address typed but not added yet.
+      if (polled === true && hotels.contains(document.activeElement)) return;
+      const typed = hotels.querySelector('.url-row input');
+      const input = h('input', { type: 'url', inputmode: 'url', placeholder: t('hotel_placeholder'), 'aria-label': t('hotel_url'), value: polled === true && typed ? typed.value : '' });
+      const msg = h('p', { class: 'error small', role: 'alert' });
+      const add = () => {
+        const url = normalizeBooking(input.value);
+        if (!url) { msg.textContent = /booking\.com\/share-/i.test(input.value) ? t('hotel_share') : t('hotel_bad'); return; }
+        if (!trip.hotels.includes(url) && trip.hotels.length < 10) { trip.hotels.push(url); markDirty(); }
+        paintHotels();
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+      const row = (url, i) => {
+        const st = hotelStatus[url];
+        const status = h('p', { class: `hotel-status ${st ? st.status : 'pending'}` });
+        if (!st || st.status === 'pending') status.textContent = t('hotel_pending');
+        else if (st.status === 'found') status.textContent = fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 });
+        const alias = h('input', { type: 'text', maxlength: 100, value: trip.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
+          oninput: (e) => { const v = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); if (v.trim()) trip.hotel_names[url] = v; else delete trip.hotel_names[url]; markDirty(); } });
+        // Between full summaries a hotel with a price here writes only once it costs that or less.
+        const alert = h('input', { type: 'number', min: 50, max: 50000, step: 10, inputmode: 'numeric', class: 'alert-price', value: trip.price_alerts[url] || '',
+          placeholder: t('alert_placeholder'), 'aria-label': t('alert_label'),
+          oninput: (e) => { const v = Math.round(Number(e.target.value)); if (v >= 50 && v <= 50000) trip.price_alerts[url] = v; else delete trip.price_alerts[url]; markDirty(); } });
+        return h('div', { class: 'hotel-row' },
+          h('span', { class: 'tag' },
+            h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
+            h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { trip.hotels.splice(i, 1); delete trip.hotel_names[url]; delete trip.price_alerts[url]; paintHotels(); markDirty(); } }, '×')),
+          h('label', { class: 'alert' }, t('alert_label'), alert, h('span', { class: 'muted' }, '€')),
+          st && st.status === 'not_found' ? h('div', { class: 'hotel-fix' }, h('p', { class: 'hotel-status not_found' }, t('hotel_not_found')), alias) : status);
+      };
+      hotels.replaceChildren(
+        trip.hotels.length ? h('div', { class: 'hotel-list' }, ...trip.hotels.map(row)) : '',
+        trip.hotels.length < 10 ? h('div', { class: 'url-row' }, input, h('button', { type: 'button', class: 'btn small', onclick: add }, t('add'))) : '',
+        trip.hotels.length < 10 ? h('p', { class: 'hint example' }, t('hotel_example'), ' ', h('code', {}, 'https://www.booking.com/hotel/tr/lonicera-resort-spa.html')) : '', msg);
+    };
+    paintHotels();
+    hotelPainters.push(paintHotels);
+    const family = h('div', { class: 'sub', hidden: trip.party !== 'family' },
+      group(t('adults'), stepper(trip.family, 'adults', 1, 6, t('adults'))),
+      group(t('children'), kidsEditor(trip.family.children)),
+      h('p', { class: 'hint' }, t('vac_family_hint')));
+    const flex = h('div', { class: 'sub', hidden: !trip.flexible },
+      group(t('flex_nights'), stepper(trip, 'flex_nights', 3, 21, t('flex_nights'))),
+      h('p', { class: 'hint' }, t('flex_hint')));
+    const sug = trip.suggest;
+    const sugBox = h('div', { class: 'sub', hidden: !sug.enabled },
+      h('div', { class: 'two' },
+        field(t('suggest_max'), numberInput(sug, 'max_hotel_eur', 100, 50000, 1, '€')),
+        group(t('min_stars'), segmented(sug, 'min_stars', [[0, t('stars_any')], [3, '3+'], [4, '4+'], [5, '5']]))),
+      group(t('min_rating'), segmented(sug, 'min_rating', [[7.5, '7.5+'], [8, '8+'], [8.5, '8.5+'], [9, '9+']])),
+      toggle(sug, 'all_inclusive', t('all_inclusive')), toggle(sug, 'aquapark', t('aquapark')),
+      h('p', { class: 'hint' }, t('suggest_beach')));
+    const homeNote = h('p', { class: 'hint warn-text', hidden: trip.transport === 'air' || Boolean(s.profile.home) }, t('needs_home'));
+    const title = h('h4', {}, trip.name || fmt('trip_n', { n: index + 1 }));
+    const start = h('input', { type: 'date', value: trip.start, min: localDay(0), onchange: (e) => {
+      trip.start = e.target.value; if (trip.end <= trip.start) { trip.end = shiftDay(trip.start, 1); end.value = trip.end; } end.min = shiftDay(trip.start, 1); markDirty(); } });
+    const end = h('input', { type: 'date', value: trip.end, min: shiftDay(trip.start, 1), onchange: (e) => { trip.end = e.target.value; markDirty(); } });
+    return h('article', { class: 'trip' },
+      h('div', { class: 'trip-head' }, title,
+        h('button', { type: 'button', class: 'btn small danger', onclick: () => { if (window.confirm(t('trip_remove_confirm'))) { vac.trips.splice(index, 1); paintTrips(); markDirty(); } } }, t('trip_remove'))),
+      field(t('trip_name'), h('input', { type: 'text', maxlength: 60, value: trip.name, placeholder: t('trip_name_ph'),
+        oninput: (e) => { trip.name = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); title.textContent = trip.name || fmt('trip_n', { n: index + 1 }); markDirty(); } })),
+      group(t('trip_dates'), h('div', { class: 'range' }, h('label', {}, t('from'), start), h('label', {}, t('to'), end))),
+      toggle(trip, 'flexible', t('flexible'), () => { flex.hidden = !trip.flexible; }), flex,
+      group(t('transport'), segmented(trip, 'transport', transportOptions(), () => { homeNote.hidden = trip.transport === 'air' || Boolean(s.profile.home); })), homeNote,
+      group(t('party'), segmented(trip, 'party', [['solo', t('solo')], ['family', t('family')]], () => { family.hidden = trip.party !== 'family'; })), family,
+      group(t('vac_countries'), countryPicker(trip.countries, 30)),
+      group(t('trip_exclude'), placePicker(trip.exclude_places, 50), t('trip_exclude_hint')),
+      group(t('hotels'), hotels),
+      toggle(trip, 'free_cancellation', t('free_cancellation')), toggle(trip, 'pay_later', t('pay_later')),
+      h('p', { class: 'hint' }, t('terms_hint')),
+      toggle(sug, 'enabled', t('suggest'), () => { sugBox.hidden = !sug.enabled; }), sugBox);
+  };
+  const paintTrips = () => {
+    hotelPainters.length = 0;
+    tripsBox.replaceChildren(...vac.trips.map(tripCard),
+      vac.trips.length < 8 ? h('button', { type: 'button', class: 'btn', onclick: () => { vac.trips.push(newTrip()); paintTrips(); markDirty(); } }, `+ ${t('trip_add')}`) : '');
+  };
+  paintTrips();
+  refreshHotels();
+  hotelsRefresh = () => refreshHotels();
+  // Weekends: by air, by train or by car from home.
+  const wk = s.blocks.weekends;
+  const driveBox = h('div', { class: 'sub', hidden: wk.transport !== 'car' },
+    field(t('max_drive'), select(wk, 'max_drive_hours', Array.from({ length: 9 }, (_, i) => [i + 2, fmt('hours_n', { n: i + 2 })]))));
+  const wkNote = h('p', { class: 'hint warn-text', hidden: wk.transport === 'air' || Boolean(s.profile.home) }, t('needs_home'));
+  const weekendsExtra = h('div', {},
+    group(t('transport'), segmented(wk, 'transport', transportOptions(), () => { driveBox.hidden = wk.transport !== 'car'; wkNote.hidden = wk.transport === 'air' || Boolean(s.profile.home); })),
+    driveBox, wkNote);
   const feeds = panel(t('tab_feeds'), t('feeds_intro'),
     h('div', { class: 'feeds' },
-      feed('weekends', '🌊'),
+      feed('weekends', '🌊', weekendsExtra),
       feed('diamonds', '💎', field(t('max_price'), numberInput(s.blocks.diamonds, 'max_price_eur', 10, 300, 1, '€'))),
       feed('wow', '🔥', field(t('max_ppn'), numberInput(s.blocks.wow, 'max_per_person_night', 10, 500, 1, '€'))),
       feed('vacation', '🌴', h('div', {},
-        group(t('party'), segmented(vac, 'party', [['solo', t('solo')], ['family', t('family')]], () => { vacFamily.hidden = vac.party !== 'family'; })), vacFamily,
-        group(t('dates'), rangeList(vac.date_options, 4, false)),
-        toggle(vac, 'flexible', t('flexible'), () => { flexBox.hidden = !vac.flexible; }), flexBox,
-        group(t('vac_countries'), countryPicker(vac.countries, 30)),
-        group(t('hotels'), hotels),
-        toggle(vac, 'free_cancellation', t('free_cancellation')), toggle(vac, 'pay_later', t('pay_later')),
-        h('p', { class: 'hint' }, t('terms_hint')),
-        toggle(sug, 'enabled', t('suggest'), () => { sugBox.hidden = !sug.enabled; }), sugBox,
+        h('p', { class: 'hint' }, t('trips_intro')), tripsBox,
         h('p', { class: 'hint' }, t('hotel_price_note'))))));
 
   // 6. Scoring: presets as cards, sliders folded away
@@ -722,14 +823,15 @@ function settingsView() {
 const hotelStatus = {};
 let hotelTimer = null;
 let hotelsRefresh = null;
-async function refreshHotels(paint, tries = 0) {
+const hotelPainters = [];
+async function refreshHotels(tries = 0) {
   clearTimeout(hotelTimer);
-  if (!draft || !draft.blocks.vacation.hotels.length) return;
+  if (!draft || !draft.blocks.vacation.trips.some((trip) => trip.hotels.length)) return;
   const res = await api('GET', '/v1/hotels');
   if (!res.ok || !Array.isArray(res.data.hotels)) return;
   for (const st of res.data.hotels) hotelStatus[st.url] = st;
-  paint(true);
-  if (res.data.hotels.some((st) => st.status === 'pending') && tries < 36) hotelTimer = setTimeout(() => refreshHotels(paint, tries + 1), 5000);
+  for (const paint of hotelPainters) paint(true);
+  if (res.data.hotels.some((st) => st.status === 'pending') && tries < 36) hotelTimer = setTimeout(() => refreshHotels(tries + 1), 5000);
 }
 
 function normalizeBooking(value) {

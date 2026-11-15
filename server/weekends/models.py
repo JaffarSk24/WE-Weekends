@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
@@ -112,8 +113,24 @@ class Busy(DateRange):
     scope: Literal["all", "family"] = "all"
 
 
+class Home(Strict):
+    """Where a car trip starts: the place the user picked from the search."""
+    name: Annotated[str, StringConstraints(min_length=1, max_length=160, pattern=r"^[^<>\x00-\x1f]*$")]
+    lat: Annotated[float, Field(ge=-90, le=90)]
+    lon: Annotated[float, Field(ge=-180, le=180)]
+    country: Annotated[str, StringConstraints(pattern=r"^[A-Z]{2}$")]
+
+
+class Car(Strict):
+    fuel: Literal["petrol", "diesel", "electric"] = "petrol"
+    per_100: Annotated[float, Field(ge=1, le=40)] = 6.5  # litres or kWh per 100 km
+    price: Annotated[float, Field(ge=0.05, le=5)] | None = None  # the user's own price a litre or kWh, else by country
+
+
 class Profile(Strict):
     origins: Annotated[list[Airport], Field(min_length=1, max_length=6), AfterValidator(_unique)] = ["BTS"]
+    home: Home | None = None
+    car: Car = Car()
     citizenship: ISO2 | None = None
     eu_residence: ISO2 | None = None
 
@@ -239,8 +256,12 @@ class Block(Strict):
     freq: Freq = "daily"
 
 
+Transport = Literal["air", "train", "car"]
+
+
 class Weekends(Block):
-    pass
+    transport: Transport = "air"
+    max_drive_hours: Annotated[int, Field(ge=2, le=10)] = 5  # by car, one way
 
 
 class Diamonds(Block):
@@ -284,18 +305,22 @@ class Suggest(Strict):
     min_rating: Annotated[float, Field(ge=6, le=10, multiple_of=0.1)] = 8.5
 
 
-class Vacation(Block):
+class HolidayTrip(DateRange):
+    """One holiday on its own dates, with its own transport, party, places,
+    hotels and suggestions: none of it is shared with the other trips."""
     @model_validator(mode="after")
-    def _names(self) -> Vacation:
-        return _vacation_names(self)
+    def _names(self) -> HolidayTrip:
+        self.hotel_names = {url: name for url, name in self.hotel_names.items() if url in self.hotels and name.strip()}
+        self.price_alerts = {url: price for url, price in self.price_alerts.items() if url in self.hotels}
+        return self
 
-    enabled: bool = False
-    freq: Freq = "weekly"
+    id: Annotated[str, StringConstraints(pattern=r"^[a-z0-9]{1,12}$")] = Field(default_factory=lambda: secrets.token_hex(4))
+    name: Annotated[str, StringConstraints(max_length=60, pattern=r"^[^<>\x00-\x1f]*$")] = ""
+    transport: Transport = "air"
     party: Literal["solo", "family"] = "family"
-    # Filled from the family of the budget the first time, then its own.
-    family: Party | None = None
-    date_options: Annotated[list[DateRange], Field(max_length=4)] = []
+    family: Party = Party()
     countries: Annotated[list[ISO2], Field(max_length=30), AfterValidator(_unique)] = []
+    exclude_places: Annotated[list[Place], Field(max_length=50), AfterValidator(_unique)] = []
     hotels: Annotated[list[BookingUrl], Field(max_length=10), AfterValidator(_unique)] = []
     # The hotel's current name, for when Booking renamed it but kept the address.
     hotel_names: Annotated[dict[str, Annotated[str, StringConstraints(max_length=100, pattern=r"^[^<>\x00-\x1f]*$")]], Field(max_length=10)] = {}
@@ -310,10 +335,29 @@ class Vacation(Block):
     flex_nights: Annotated[int, Field(ge=3, le=21)] = 10
 
 
-def _vacation_names(v: Vacation) -> Vacation:
-    v.hotel_names = {url: name for url, name in v.hotel_names.items() if url in v.hotels and name.strip()}
-    v.price_alerts = {url: price for url, price in v.price_alerts.items() if url in v.hotels}
-    return v
+class Vacation(Block):
+    enabled: bool = False
+    freq: Freq = "weekly"
+    trips: Annotated[list[HolidayTrip], Field(max_length=8)] = []
+
+
+def _trips_from_one_holiday(data: dict) -> dict:
+    """Settings saved before trips: one holiday with several date options
+    becomes one trip a date option, each with the same hotels and places."""
+    v = ((data.get("blocks") or {}).get("vacation")) if isinstance(data, dict) else None
+    legacy = {"date_options", "party", "family", "countries", "hotels", "hotel_names", "suggest", "free_cancellation", "pay_later",
+              "price_alerts", "flexible", "flex_nights"}
+    if not isinstance(v, dict) or "trips" in v or not legacy & set(v):
+        return data
+    fam = v.get("family") or {k: ((data.get("budgets") or {}).get("family") or {}).get(k) for k in ("adults", "children")}
+    shared = {k: v[k] for k in ("party", "countries", "hotels", "hotel_names", "suggest", "free_cancellation", "pay_later",
+                                "price_alerts", "flexible", "flex_nights") if k in v}
+    if isinstance(fam, dict) and fam.get("adults"):
+        shared["family"] = {"adults": fam["adults"], "children": fam.get("children") or []}
+    trips = [{**shared, "id": secrets.token_hex(4), "start": d.get("start"), "end": d.get("end")}
+             for d in v.get("date_options") or [] if isinstance(d, dict)]
+    data["blocks"]["vacation"] = {"enabled": v.get("enabled", False), "freq": v.get("freq", "weekly"), "trips": trips}
+    return data
 
 
 class Blocks(Strict):
@@ -341,13 +385,15 @@ class UserSettings(Strict):
     blocks: Blocks = Blocks()
     digest: Digest = Digest()
 
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate(cls, data):
+        return _trips_from_one_holiday(data)
+
     @model_validator(mode="after")
     def _check(self) -> UserSettings:
         if self.rating.preset != "custom":
             self.rating.weights = PRESETS[self.rating.preset].model_copy()
-        if self.blocks.vacation.family is None:
-            fam = self.budgets.family
-            self.blocks.vacation.family = Party(adults=fam.adults, children=list(fam.children))
         return self
 
 

@@ -53,21 +53,25 @@ class Users:
                 raise VersionConflict()
         return version + 1
 
-    def track_hotel(self, chat_id: int, url: str) -> str:
-        """Adds a hotel to the user's tracked ones, as the page would:
-        added, known (already there), full (ten at most) or missing."""
+    def track_hotel(self, chat_id: int, url: str, trip_id: str = "") -> str:
+        """Adds a hotel to the tracked ones of a trip (the first one when the
+        trip is not known), as the page would: added, known (already there),
+        full (ten at most) or missing."""
         with self.db.tx() as con:
             row = con.execute("SELECT settings FROM users WHERE chat_id = ?", (chat_id,)).fetchone()
             if row is None or not row["settings"]:
                 return "missing"
             settings = load_settings(row["settings"])
-            hotels = settings.blocks.vacation.hotels
-            if url in hotels:
+            trips = settings.blocks.vacation.trips
+            trip = next((x for x in trips if x.id == trip_id), trips[0] if trips else None)
+            if trip is None:
+                return "missing"
+            if url in trip.hotels:
                 return "known"
-            if len(hotels) >= 10:
+            if len(trip.hotels) >= 10:
                 return "full"
             data = json.loads(settings.model_dump_json())
-            data["blocks"]["vacation"]["hotels"].append(url)
+            next(x for x in data["blocks"]["vacation"]["trips"] if x["id"] == trip.id)["hotels"].append(url)
             payload = UserSettings.model_validate(data).model_dump_json()  # the same checks a save from the page passes
             con.execute("UPDATE users SET settings = ?, version = version + 1, updated_at = ? WHERE chat_id = ?", (payload, int(time.time()), chat_id))
         return "added"

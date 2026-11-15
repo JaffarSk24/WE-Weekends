@@ -37,6 +37,13 @@ class Itinerary:
     url: str
     image: str
     ret_airline: str = ""
+    # By train or by car instead of a flight: how far, how long one way, and
+    # whether the price is an estimate.
+    mode: str = "air"
+    km: float = 0.0
+    hours: float = 0.0
+    approx: bool = False
+    changes: str = ""  # changes of train, out and back, like "1/0"
 
     @property
     def airlines(self) -> str:

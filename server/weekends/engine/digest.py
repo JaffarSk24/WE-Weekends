@@ -24,6 +24,18 @@ TX = {
         "nights": "ночей: {n}",
         "flight": "🛫 <a href=\"{url}\">{air}</a> {dest}, туда {o}, обратно {r} · {p}€{who}",
         "who_family": " на всех",
+        "train": "🚆 <a href=\"{url}\">{trains}</a>, туда {o}, обратно {r}{chg} · {p}€{who}",
+        "train_chg": ", пересадок {n}",
+        "car": "🚗 <a href=\"{url}\">{km} км, ≈{h} в одну сторону</a> · {fuel} туда и обратно ≈{p}€",
+        "car_note": "   ℹ точный прогноз дать невозможно: на расход влияет множество факторов. Советуем прибавить 15% к расчётной цене.",
+        "fuel": {"petrol": "бензин", "diesel": "дизель", "electric": "электричество"},
+        "hours": "{h} ч {m} мин",
+        "approx_fare": " (оценка по расстоянию)",
+        "vac_train": "   🚆 <a href=\"{url}\">{trains}</a>, туда {o}, обратно {r}{chg} · {p}€ на всех{approx}",
+        "vac_car": "   🚗 <a href=\"{url}\">{km} км, ≈{h} в одну сторону</a> · {fuel} туда и обратно ≈{p}€",
+        "vac_no_train": "   🚆 поездом до этого места маршрут не нашёлся",
+        "vac_no_home": "   🚗 укажите в настройках адрес, откуда выезжаете, и расход машины",
+        "vac_no_road": "   🚗 дорогу до этого места построить не удалось",
         "stay": "🏨 <a href=\"{url}\">{name}</a>{place} ({rating}) · {p}€ за {n}",
         "stay_rating": "TripAdvisor {r} из 5, отзывов: {c}",
         "stay_nights": {1: "ночь", 2: "ночи", 5: "ночей"},
@@ -94,6 +106,18 @@ TX = {
         "nights": "nocí: {n}",
         "flight": "🛫 <a href=\"{url}\">{air}</a> {dest}, tam {o}, späť {r} · {p}€{who}",
         "who_family": " pre všetkých",
+        "train": "🚆 <a href=\"{url}\">{trains}</a>, tam {o}, späť {r}{chg} · {p}€{who}",
+        "train_chg": ", prestupov {n}",
+        "car": "🚗 <a href=\"{url}\">{km} km, ≈{h} jedným smerom</a> · {fuel} tam a späť ≈{p}€",
+        "car_note": "   ℹ presný odhad nie je možný: spotrebu ovplyvňuje veľa faktorov. Odporúčame pripočítať 15% k vypočítanej cene.",
+        "fuel": {"petrol": "benzín", "diesel": "nafta", "electric": "elektrina"},
+        "hours": "{h} h {m} min",
+        "approx_fare": " (odhad podľa vzdialenosti)",
+        "vac_train": "   🚆 <a href=\"{url}\">{trains}</a>, tam {o}, späť {r}{chg} · {p}€ pre všetkých{approx}",
+        "vac_car": "   🚗 <a href=\"{url}\">{km} km, ≈{h} jedným smerom</a> · {fuel} tam a späť ≈{p}€",
+        "vac_no_train": "   🚆 vlakom sme trasu na toto miesto nenašli",
+        "vac_no_home": "   🚗 zadajte v nastaveniach adresu, odkiaľ vyrážate, a spotrebu auta",
+        "vac_no_road": "   🚗 cestu na toto miesto sa nepodarilo nájsť",
         "stay": "🏨 <a href=\"{url}\">{name}</a>{place} ({rating}) · {p}€ za {n}",
         "stay_rating": "TripAdvisor {r} z 5, recenzií: {c}",
         "stay_nights": {1: "noc", 2: "noci", 5: "nocí"},
@@ -164,6 +188,18 @@ TX = {
         "nights": "nights: {n}",
         "flight": "🛫 <a href=\"{url}\">{air}</a> {dest}, out {o}, back {r} · {p}€{who}",
         "who_family": " for everyone",
+        "train": "🚆 <a href=\"{url}\">{trains}</a>, out {o}, back {r}{chg} · {p}€{who}",
+        "train_chg": ", {n} changes",
+        "car": "🚗 <a href=\"{url}\">{km} km, ≈{h} one way</a> · {fuel} there and back ≈{p}€",
+        "car_note": "   ℹ no exact forecast is possible: many things change the consumption. We suggest adding 15% to the calculated price.",
+        "fuel": {"petrol": "petrol", "diesel": "diesel", "electric": "electricity"},
+        "hours": "{h} h {m} min",
+        "approx_fare": " (estimated from the distance)",
+        "vac_train": "   🚆 <a href=\"{url}\">{trains}</a>, out {o}, back {r}{chg} · {p}€ for everyone{approx}",
+        "vac_car": "   🚗 <a href=\"{url}\">{km} km, ≈{h} one way</a> · {fuel} there and back ≈{p}€",
+        "vac_no_train": "   🚆 no train route to this place was found",
+        "vac_no_home": "   🚗 set the address you leave from and your car's consumption in the settings",
+        "vac_no_road": "   🚗 no road to this place could be found",
         "stay": "🏨 <a href=\"{url}\">{name}</a>{place} ({rating}) · {p}€ for {n}",
         "stay_rating": "TripAdvisor {r} of 5, {c} reviews",
         "stay_nights": {1: "night", 2: "nights", 5: "nights"},
@@ -300,6 +336,11 @@ def pieces(text: str, limit: int = 3900) -> list[str]:
     return out
 
 
+def duration(lang: str, hours: float) -> str:
+    h, m = divmod(round(hours * 60), 60)
+    return TX[lang]["hours"].format(h=h, m=m)
+
+
 def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: int = 0, new: bool = True) -> str:
     t = TX[lang]
     it = c.it
@@ -309,7 +350,16 @@ def item_text(lang: str, c: Candidate, city_name: str, adults: int = 1, kids: in
     back = f"{it.ret_depart:%H:%M}→{it.back:%H:%M}"
     url = it.url if it.url.startswith("https://") else "https://www.kiwi.com/"
     who = t["who_family"] if c.mode == "family" else ""
-    lines.append(t["flight"].format(url=e(url), air=e(it.airline or t["tickets"]), dest=e(it.dest), o=e(out), r=e(back), p=round(c.flight_price), who=who))
+    if it.mode == "train":
+        chg = t["train_chg"].format(n=it.changes) if it.changes not in ("", "0/0") else ""
+        lines.append(t["train"].format(url=e(url), trains=e(it.airline or "ÖBB"), o=e(out), r=e(back), chg=e(chg), p=round(c.flight_price), who=who)
+                     + (t["approx_fare"] if it.approx else ""))
+    elif it.mode == "car":
+        lines.append(t["car"].format(url=e(url), km=round(it.km), h=e(duration(lang, it.hours)), fuel=e(t["fuel"].get(it.airline, it.airline)),
+                                     p=round(c.flight_price)))
+        lines.append(t["car_note"].strip())
+    else:
+        lines.append(t["flight"].format(url=e(url), air=e(it.airline or t["tickets"]), dest=e(it.dest), o=e(out), r=e(back), p=round(c.flight_price), who=who))
     if c.mode != "diamond":
         if c.hotel_source == "estimate":
             lines.append(t["stay_estimate"].format(url=e(c.hotel_url), p=round(c.hotel_price or 0), n=f"{it.nights} {plural(lang, it.nights)}"))

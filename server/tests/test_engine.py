@@ -171,7 +171,7 @@ def test_engine_end_to_end(env):
     s["geography"]["include"] = ["IT"]
     s["calendar"]["max_lost_workdays"] = 1
     s["budgets"]["family"] = {"enabled": True, "adults": 2, "children": [8], "budget_eur": 500}
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": ["IT"],
+    s["blocks"]["vacation"] = {"enabled": True, "countries": ["IT"],
                                "date_options": [{"start": "2027-05-24", "end": "2027-06-04"}],
                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
     assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 200
@@ -271,7 +271,7 @@ def test_holiday_updates_only_on_price_change(env):
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": [],
+    s["blocks"]["vacation"] = {"enabled": True, "countries": [],
                                "date_options": [{"start": "2027-05-24", "end": "2027-06-04"}],
                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
     client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
@@ -302,7 +302,7 @@ def test_holiday_other_flights_keep_the_first_and_last_day(env):
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": ["TR"], "hotels": [],
+    s["blocks"]["vacation"] = {"enabled": True, "countries": ["TR"], "hotels": [],
                                "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}]}
     client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
     late = itin("2027-05-27T10:50", "2027-06-06T23:10", price=778, dest="AYT", country="TR", ret_depart="2027-06-06T21:40")
@@ -507,7 +507,7 @@ def test_holiday_price_change_is_marked_on_the_counted_price(env):
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": [],
+    s["blocks"]["vacation"] = {"enabled": True, "countries": [],
                                "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
     client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
@@ -558,13 +558,14 @@ def test_holiday_has_its_own_family(env):
     from datetime import date
 
     from weekends.models import UserSettings
-    old = UserSettings.model_validate({"budgets": {"family": {"enabled": False, "adults": 2, "children": [8]}}})
-    assert old.blocks.vacation.family.adults == 2 and old.blocks.vacation.family.children == [8]  # taken over once
+    old = UserSettings.model_validate({"budgets": {"family": {"enabled": False, "adults": 2, "children": [8]}},
+                                       "blocks": {"vacation": {"date_options": [{"start": "2027-05-27", "end": "2027-06-06"}]}}})
+    assert old.blocks.vacation.trips[0].family.adults == 2 and old.blocks.vacation.trips[0].family.children == [8]  # taken over once
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
     s["budgets"]["family"] = {**s["budgets"]["family"], "enabled": False, "adults": 1, "children": []}
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "party": "family", "family": {"adults": 3, "children": [8, 1]},
+    s["blocks"]["vacation"] = {"enabled": True, "party": "family", "family": {"adults": 3, "children": [8, 1]},
                                "countries": [], "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
     assert client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"}).status_code == 200
@@ -771,7 +772,7 @@ def test_hotel_known_only_to_stayforlong_gets_its_flights(env):
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "countries": [], "party": "solo",
+    s["blocks"]["vacation"] = {"enabled": True, "countries": [], "party": "solo",
                                "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
                                "hotels": ["https://www.booking.com/hotel/tr/new-place.html"]}
     client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
@@ -815,7 +816,7 @@ def test_teenagers_are_hotel_children_not_extra_adults(env):
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "party": "family", "family": {"adults": 2, "children": [8, 13]},
+    s["blocks"]["vacation"] = {"enabled": True, "party": "family", "family": {"adults": 2, "children": [8, 13]},
                                "countries": [], "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"]}
     client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
@@ -934,7 +935,7 @@ def holiday_user(env, **vacation):
     client, tg, app = env
     token = login(client, app, tg, 42)
     s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
-    s["blocks"]["vacation"] = {**s["blocks"]["vacation"], "enabled": True, "party": "solo", "countries": [],
+    s["blocks"]["vacation"] = {"enabled": True, "party": "solo", "countries": [],
                                "date_options": [{"start": "2027-05-27", "end": "2027-06-06"}],
                                "hotels": ["https://www.booking.com/hotel/tr/lonicera-resort-spa.html"], **vacation}
     r = client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
@@ -989,11 +990,11 @@ def test_suggested_hotel_can_be_tracked_with_a_button(env, monkeypatch):
     query = {"id": "q1", "from": {"id": 42, "is_bot": False, "language_code": "ru"}, "data": data,
              "message": {"message_id": 7, "chat": {"id": 42, "type": "private"}, "reply_markup": {"inline_keyboard": block.buttons}}}
     app.state.bot.handle({"callback_query": query})
-    assert engine.users()[0][2]["blocks"]["vacation"]["hotels"] == [url]
+    assert engine.users()[0][2]["blocks"]["vacation"]["trips"][0]["hotels"] == [url]
     assert tg.calls[-1][0] == "editMessageReplyMarkup" and tg.calls[-1][1]["reply_markup"]["inline_keyboard"][0][0]["text"] == "✓ Aqua Resort"
     assert "Добавлен" in tg.calls[-2][1]["text"]
     app.state.bot.handle({"callback_query": query})
-    assert "уже отслеживается" in tg.calls[-2][1]["text"] and engine.users()[0][2]["blocks"]["vacation"]["hotels"] == [url]
+    assert "уже отслеживается" in tg.calls[-2][1]["text"] and engine.users()[0][2]["blocks"]["vacation"]["trips"][0]["hotels"] == [url]
     # tracked without a TripAdvisor match of its own: known by its facts, so it is priced at once
     engine.tracked.resolve = lambda u, alias="", geos=None: run.Match(url=u, status="not_found")
     blocks, _ = engine.vacation(engine.users()[0][2], "ru", date(2026, 11, 11), full=True, sent={})
@@ -1024,5 +1025,210 @@ def test_flexible_dates_pick_the_cheapest_stay_in_the_period(env):
     engine.tracked = OnePrice(lambda checkin: 100 if checkin == "2027-06-03" else 1400)
     blocks, _ = engine.vacation(s, "ru", date(2026, 11, 12), full=False, sent=dict(items), chat_id=42)
     assert "20.06 (вс) - 27.06 (вс)" in blocks[0] and "≈1400€" in blocks[0]  # between summaries the chosen dates stay
-    s["blocks"]["vacation"]["flexible"] = False
+    s["blocks"]["vacation"]["trips"][0]["flexible"] = False
     assert "1.06 (вт) - 30.06 (ср)" in engine.vacation(s, "ru", date(2026, 11, 11), full=True, sent={})[0][0]  # exact dates as before
+
+
+def trips_user(env, trips, **profile):
+    client, tg, app = env
+    token = login(client, app, tg, 42)
+    s = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"}).json()["settings"]
+    s["blocks"]["vacation"] = {"enabled": True, "freq": "weekly", "trips": trips}
+    s["profile"].update(profile)
+    r = client.put("/v1/settings", json={"version": 0, "lang": "ru", "settings": s}, headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    return engine, engine.users()[0][2]
+
+
+HOME = {"name": "Trnava, Slovensko", "lat": 48.377, "lon": 17.586, "country": "SK"}
+
+
+def test_each_trip_keeps_its_own_settings(env, monkeypatch):
+    from weekends.engine import run
+    url_a, url_b = "https://www.booking.com/hotel/tr/a-resort.html", "https://www.booking.com/hotel/gr/b-resort.html"
+    facts = [{"url": "https://www.booking.com/hotel/tr/kemer-palace.html", "name": "Kemer Palace", "cc": "tr", "city": "Kemer", "lat": 36.6,
+              "lon": 30.55, "stars": 5, "score": 9.0, "reviews": 900, "ai": True, "aqua": True, "ta": "g1-d9"}]
+    monkeypatch.setattr(run, "hotel_facts", lambda: facts)
+    engine, s = trips_user(env, [
+        {"name": "Турция", "start": "2027-05-27", "end": "2027-06-06", "party": "family", "family": {"adults": 2, "children": [8]},
+         "hotels": [url_a], "countries": ["TR"], "suggest": {"enabled": True, "max_hotel_eur": 5000, "min_stars": 5, "all_inclusive": True,
+                                                              "aquapark": False, "min_rating": 8.5}},
+        {"name": "Новый год", "start": "2027-01-03", "end": "2027-01-06", "party": "solo", "hotels": [url_b], "countries": ["TR"],
+         "exclude_places": ["kemer"], "suggest": {"enabled": False}}])
+    engine.tracked = OnePrice(1500)
+    engine.kiwi = RouteKiwi([])
+    blocks, _ = engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={}, chat_id=42)
+    text = "\n\n".join(blocks)
+    assert "Отпуск «Турция»: 27.05 (чт) - 6.06 (вс), семья на 2 взр. + 1 реб." in text and "Отпуск «Новый год»: 3.01 (вс) - 6.01 (ср), один" in text
+    assert text.count("Подобрали по вашим условиям") == 1  # suggestions only where they are on
+    assert "Kemer Palace" in text  # suggested for the first trip; the second one excludes Kemer and has no suggestions anyway
+
+
+def test_places_of_a_kind_marked_not_interesting_are_left_out(env):
+    from weekends.engine.run import place_tags, wanted_place
+    sea_only = {"sea": 3, "mountains": 0, "sights": 0}
+    assert wanted_place(("sea", "sights"), sea_only) and not wanted_place(("sights",), sea_only) and not wanted_place(("mountains", "sights"), sea_only)
+    assert place_tags("ZZZ") == ("sights",)  # a city with no tags is a city to see
+    client, tg, app = env
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    fri = date.today() + timedelta(days=(4 - date.today().weekday()) % 7 + 7)
+    sea = itin(f"{fri}T18:30", f"{fri + timedelta(days=2)}T22:10", price=45, dest="NAP")
+    city = itin(f"{fri}T18:30", f"{fri + timedelta(days=2)}T22:10", price=30, dest="MXP")
+    engine.pool["BTS"] = {sea.key: sea, city.key: city}
+    s = settings(geography__groups=[], geography__include=["IT"], priorities=sea_only)
+    engine.hotels.cheapest = lambda q: __import__("weekends.engine.hotels", fromlist=["Stay"]).Stay(
+        name="H", price=100, rating=8.5, reviews=200, url="u", source="xotelo")
+    picked = [c.it.dest for c in engine.pick(42, s, "ru", "solo", date.today())]
+    assert picked == ["NAP"]
+    s["priorities"]["sights"] = 1
+    assert sorted(c.it.dest for c in engine.pick(42, s, "ru", "solo", date.today())) == ["MXP", "NAP"]
+
+
+class FakeRoad:
+    def __init__(self, km=862.0, hours=9.4, cost=95.9):
+        self.km, self.hours, self.one_way = km, hours, cost
+
+    def route(self, a, b):
+        return {"km": self.km, "hours": self.hours, "countries": [["SK", 61], ["AT", 274], ["SI", 61], ["HR", 466]]}
+
+    def cost(self, car, route, home_country):
+        return self.one_way
+
+    def around(self, home, places):
+        return {c: (300.0, 3.2) if c == "VIE" else (900.0, 9.0) for c in places}
+
+
+def test_holiday_by_car_counts_the_fuel_there_and_back(env):
+    from weekends.engine.tracked import Match
+    engine, s = trips_user(env, [{"start": "2027-07-04", "end": "2027-07-14", "party": "solo", "transport": "car",
+                                  "hotels": ["https://www.booking.com/hotel/hr/sea-view.html"]}], home=HOME, car={"fuel": "diesel", "per_100": 6.0})
+
+    class T(OnePrice):
+        def resolve(self, url, alias="", geos=None):
+            return Match(url=url, status="found", key="g1-d2", name="Sea View", rating=4.5, reviews=900, lat=43.51, lon=16.44)
+
+    engine.tracked = T(1200)
+    engine.road = FakeRoad()
+    text = engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
+    assert "🚗" in text and "862 км, ≈9 ч 24 мин в одну сторону</a> · дизель туда и обратно ≈192€" in text
+    assert "Итого с перелётом ≈1392€" in text and "прибавить 15%" in text and "google.com/maps/dir" in text
+    assert "Другие прямые рейсы" not in text
+    s["profile"]["home"] = None
+    assert "укажите в настройках адрес" in engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
+
+
+def test_holiday_by_train_counts_the_fares_for_the_party(env):
+    from weekends.engine.rail import Journey
+    from weekends.engine.tracked import Match
+    engine, s = trips_user(env, [{"start": "2027-07-04", "end": "2027-07-14", "party": "family", "family": {"adults": 2, "children": [8]},
+                                  "transport": "train", "hotels": ["https://www.booking.com/hotel/it/lido.html"]}], home=HOME)
+
+    class T(OnePrice):
+        def resolve(self, url, alias="", geos=None):
+            return Match(url=url, status="found", key="g1-d2", name="Lido", rating=4.5, reviews=900, lat=45.43, lon=12.33)
+
+    asked = []
+
+    class R:
+        def station(self, name, near):
+            return {"number": hash(name) % 1000, "name": name, "latitude": int(near[0] * 1e6), "longitude": int(near[1] * 1e6)}
+
+        def journey(self, a, b, after, adults, ages):
+            asked.append((after.date().isoformat(), adults, ages))
+            return Journey(depart=after.replace(hour=18, minute=50), arrive=after.replace(hour=23), changes=1, trains="REX, NJ", price=71.5, approx=False)
+
+    engine.tracked, engine.rail = T(2000), R()
+    text = engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
+    assert "🚆" in text and "REX, NJ" in text and "143€ на всех" in text and "Итого с перелётом ≈2143€" in text
+    assert asked == [("2027-07-04", 2, (8,)), ("2027-07-14", 2, (8,))]
+
+
+def test_weekends_by_car_and_by_train_from_home(env):
+    from weekends.engine.rail import Journey
+    client, tg, app = env
+    engine = Engine(app.state.cfg, app.state.db, tg)
+    engine.road = FakeRoad(cost=24.5)
+    today = date(2026, 11, 15)
+    s = settings(geography__groups=[], geography__include=["AT", "IT"], profile__home=HOME, trip__horizon_days=30,
+                 blocks__weekends={"enabled": True, "freq": "daily", "transport": "car", "max_drive_hours": 5})
+    pool = engine._ground_pool(s, today)
+    assert pool and {it.dest for it in pool} == {"VIE"}  # Italy is beyond five hours
+    first = min(pool, key=lambda it: it.depart)
+    assert (first.mode, first.price, first.depart.weekday(), first.depart.hour, first.ret_depart.weekday()) == ("car", 49.0, 4, 17, 6)
+
+    class R:
+        def station(self, name, near):
+            return {"number": hash(name) % 1000, "name": name, "latitude": int(near[0] * 1e6), "longitude": int(near[1] * 1e6)}
+
+        def journey(self, a, b, after, adults, ages):
+            return Journey(depart=after.replace(minute=50), arrive=after.replace(hour=after.hour + 1, minute=50), changes=0, trains="REX",
+                           price=5.9 * (adults + len([x for x in ages if x >= 15])), approx=False)
+
+    engine.rail = R()
+    s["blocks"]["weekends"]["transport"] = "train"
+    pool = engine._ground_pool(s, today)
+    vie = [it for it in pool if it.dest == "VIE"]
+    assert len(vie) == 4 and vie[0].mode == "train" and vie[0].price == 11.8 and vie[0].depart.hour == 15
+
+    from weekends.engine.digest import item_text
+    from weekends.engine.score import Candidate
+    c = Candidate(it=vie[0], mode="solo", flight_price=11.8, entry="free", tags=("sights",), workdays_lost=0, school_days_lost=0,
+                  out_slot="evening", ret_slot="evening", hotel_price=200, hotel_name="H", hotel_rating=8.5, hotel_reviews=300, hotel_url="u")
+    assert "🚆" in item_text("ru", c, "Вена") and "12€" in item_text("ru", c, "Вена")
+    s["blocks"]["weekends"]["transport"] = "car"
+    drive = min(engine._ground_pool(s, today), key=lambda it: it.depart)
+    car = Candidate(it=drive, mode="solo", flight_price=drive.price, entry="free", tags=("sights",), workdays_lost=0, school_days_lost=0,
+                    out_slot="evening", ret_slot="evening", hotel_price=200, hotel_name="H", hotel_rating=8.5, hotel_reviews=300, hotel_url="u")
+    text = item_text("ru", car, "Вена")
+    assert "🚗" in text and "300 км, ≈3 ч 12 мин в одну сторону" in text and "бензин туда и обратно ≈49€" in text and "15%" in text
+
+
+def test_route_is_priced_by_the_countries_it_runs_through(tmp_path):
+    from weekends.db import Database
+    from weekends.engine import road
+    assert road.country_at(48.15, 17.11) == "SK" and road.country_at(48.21, 16.37) == "AT" and road.country_at(45.81, 15.98) == "HR"
+    line = [(48.2, 17.6 - i * 0.05) for i in range(20)]  # from near Trnava westwards into Austria
+    parts = road.by_country(line)
+    assert [c for c, _ in parts][:2] == ["SK", "AT"]
+    r = road.Road(Database(str(tmp_path / "r.sqlite")))
+    r.prices = lambda: {"petrol": {"SK": 1.7, "AT": 1.6}, "diesel": {}, "electric": {"SK": 0.2}, "fuel_date": "2026-11-09"}
+    route = {"km": 100.0, "hours": 1.2, "countries": [["SK", 40.0], ["AT", 50.0], ["CH", 10.0]]}  # Switzerland: no price, the tank from Austria
+    assert r.cost({"fuel": "petrol", "per_100": 10, "price": None}, route, "SK") == round(4 * 1.7 + 5 * 1.6 + 1 * 1.6, 2)
+    assert r.cost({"fuel": "petrol", "per_100": 10, "price": 2.0}, route, "SK") == 20.0  # the user's own price wins
+    assert r.cost({"fuel": "electric", "per_100": 20, "price": None}, route, "SK") == round(20 * 0.2, 2)
+
+
+def test_train_fares_come_from_the_shop_or_an_estimate(tmp_path, monkeypatch):
+    import httpx
+
+    from weekends.db import Database
+    from weekends.engine import rail
+    monkeypatch.setattr(rail, "PAUSE", 0)
+    sent = []
+
+    def handler(request):
+        path = request.url.path
+        if path.endswith("/init"):
+            return httpx.Response(200, json={"accessToken": "t", "sessionId": "s", "supportId": "x", "sessionTimeout": 2400})
+        if path.endswith("/stations"):
+            return httpx.Response(200, json=[{"number": 1, "name": "Far", "latitude": 40000000, "longitude": 10000000},
+                                             {"number": 5600207, "name": "Bratislava hl.st.", "latitude": 48158908, "longitude": 17106463}])
+        if path.endswith("/travelActions"):
+            return httpx.Response(200, json={"travelActions": [{"id": "ta", "entrypoint": {"id": "timetable"}}]})
+        if path.endswith("/timetable"):
+            sent.append(json.loads(request.content)["passengers"])
+            return httpx.Response(200, json={"connections": [
+                {"id": "c1", "from": {"departure": "2026-12-11T15:02:00.000"}, "to": {"arrival": "2026-12-11T16:30:00.000"}, "switches": 0,
+                 "sections": [{"category": {"displayName": "Bus"}}]},
+                {"id": "c2", "from": {"departure": "2026-12-11T15:50:00.000"}, "to": {"arrival": "2026-12-11T16:58:00.000"}, "switches": 0,
+                 "sections": [{"category": {"displayName": "REX"}}]}]})
+        return httpx.Response(200, json={"offers": [{"connectionId": "c1", "price": 18.3}, {"connectionId": "c2", "price": 11.8}]})
+
+    r = rail.Rail(Database(str(tmp_path / "t.sqlite")), httpx.Client(transport=httpx.MockTransport(handler)))
+    a = r.station("Bratislava", (48.15, 17.11))
+    assert a["number"] == 5600207  # the far namesake is no station of the place
+    j = r.journey(a, a | {"number": 2}, datetime(2026, 12, 11, 15), 2, (8,))
+    assert (j.trains, j.price, j.approx) == ("REX", 11.8, False)  # the train, not the bus
+    assert [p["type"] for p in sent[0]] == ["ADULT", "ADULT", "CHILD"] and sent[0][2]["birthDate"].startswith("2017")
+    assert rail.estimate((48.15, 17.11), (48.21, 16.37), 2, (8, 3)) == round(rail.km_between((48.15, 17.11), (48.21, 16.37)) * 1.25 * 0.09 * 2.5, 2)
