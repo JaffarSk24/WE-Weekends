@@ -1112,7 +1112,7 @@ def test_holiday_by_car_counts_the_fuel_there_and_back(env):
     engine.road = FakeRoad()
     text = engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
     assert "🚗" in text and "862 км, ≈9 ч 24 мин в одну сторону</a> · дизель туда и обратно ≈192€" in text
-    assert "Итого с перелётом ≈1392€" in text and "прибавить 15%" in text and "google.com/maps/dir" in text
+    assert "Итого с дорогой ≈1392€" in text and "прибавить 15%" in text and "google.com/maps/dir" in text
     assert "Другие прямые рейсы" not in text
     s["profile"]["home"] = None
     assert "укажите в настройках адрес" in engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
@@ -1140,8 +1140,11 @@ def test_holiday_by_train_counts_the_fares_for_the_party(env):
 
     engine.tracked, engine.rail = T(2000), R()
     text = engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
-    assert "🚆" in text and "REX, NJ" in text and "143€ на всех" in text and "Итого с перелётом ≈2143€" in text
+    assert "🚆" in text and "REX, NJ" in text and "143€ на всех" in text and "Итого с дорогой ≈2143€" in text
     assert asked == [("2027-07-04", 2, (8,)), ("2027-07-14", 2, (8,))]
+    R.journey = lambda self, a, b, after, adults, ages: None  # no timetable published for these dates yet
+    text = engine.vacation(s, "ru", date(2026, 11, 15), full=True, sent={})[0][0]
+    assert "расписания на эти даты ещё нет, оценка по расстоянию" in text and "Итого с дорогой" in text
 
 
 def test_weekends_by_car_and_by_train_from_home(env):
@@ -1169,7 +1172,7 @@ def test_weekends_by_car_and_by_train_from_home(env):
     s["blocks"]["weekends"]["transport"] = "train"
     pool = engine._ground_pool(s, today)
     vie = [it for it in pool if it.dest == "VIE"]
-    assert len(vie) == 4 and vie[0].mode == "train" and vie[0].price == 11.8 and vie[0].depart.hour == 15
+    assert len(vie) == 3 and vie[0].mode == "train" and vie[0].price == 11.8 and vie[0].depart.hour == 15
 
     from weekends.engine.digest import item_text
     from weekends.engine.score import Candidate

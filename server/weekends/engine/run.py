@@ -34,6 +34,7 @@ from .hotels import Hotels, StayQuery, compare_link, tripadvisor_keys
 from .kiwi import Itinerary, Kiwi, kdate
 from .places import Exclusions
 from .rail import Rail
+from .rail import estimate as rail_estimate
 from .road import Road, km_between
 from .score import Candidate, evaluate, score
 from .stayforlong import ALL_INCLUSIVE, Offer, Stayforlong
@@ -109,8 +110,8 @@ FLEX_PAIRS = 3
 GROUND_KMH = 95  # straight-line km an hour of driving can cover at most, to ask the road only for places in reach
 MIN_DRIVE_KM = 40  # nearer than this is no trip
 TRAIN_KM = 650  # weekend cities by train: this far at most in a straight line
-TRAIN_CITIES = 12  # the nearest of them
-TRAIN_WEEKENDS = 4
+TRAIN_CITIES = 10  # the nearest of them
+TRAIN_WEEKENDS = 3
 FLEX_GROUND_STARTS = 6  # start days of a flexible holiday by car or train priced with the hotels  # date pairs of a flexible holiday priced with the hotels
 MAX_DELIVERY_TRIES = 6  # ticks, five minutes apart
 WATCH_MIN_STAYS = 6  # fewer stay lookups than this say nothing about the sources
@@ -547,7 +548,7 @@ class Engine:
         url = maps_link(here, (m.lat, m.lon), "driving")
         return [t["vac_car"].format(url=dg.e(url), km=round(route["km"]), h=dg.e(dg.duration(lang, route["hours"])),
                                     fuel=dg.e(t["fuel"][car["fuel"]]), p=round(one_way * 2)),
-                t["vac_total"].format(t=round(hotel_total + one_way * 2)), t["car_note"]]
+                t["vac_total_way"].format(t=round(hotel_total + one_way * 2)), t["car_note"]]
 
     def _train_lines(self, s: dict, lang: str, m, start: date, end: date, adults: int, ages: tuple[int, ...], hotel_total: float) -> list[str]:
         """The train from home to the town nearest the hotel and back, with
@@ -561,7 +562,15 @@ class Engine:
         out, back = self._rail_pair(s, (d["city"], (d["lat"], d["lon"])), datetime.combine(start, datetime.min.time()).replace(hour=6),
                                     datetime.combine(end, datetime.min.time()).replace(hour=9), adults, ages)
         if out is None or back is None:
-            return [t["vac_no_train"]]
+            # no timetable for these dates yet (the railways publish it a few months ahead): a fare from the distance
+            home = s["profile"]["home"]
+            a = self.rail.station(home["name"].split(",")[0].strip(), here)
+            b = self.rail.station(d["city"], (d["lat"], d["lon"]))
+            if a is None or b is None:
+                return [t["vac_no_train"]]
+            fare = 2 * rail_estimate((a["latitude"] / 1e6, a["longitude"] / 1e6), (b["latitude"] / 1e6, b["longitude"] / 1e6), adults, ages)
+            return [t["vac_train_est"].format(url=dg.e(maps_link(here, (d["lat"], d["lon"]), "transit")), p=round(fare)),
+                    t["vac_total_way"].format(t=round(hotel_total + fare))]
         changes = f"{out.changes}/{back.changes}"
         chg = t["train_chg"].format(n=changes) if changes != "0/0" else ""
         url = maps_link(here, (d["lat"], d["lon"]), "transit")
@@ -569,7 +578,7 @@ class Engine:
         return [t["vac_train"].format(url=dg.e(url), trains=dg.e(", ".join(dict.fromkeys(f"{out.trains}, {back.trains}".split(", ")))),
                                       o=dg.e(f"{out.depart:%d.%m %H:%M}"), r=dg.e(f"{back.depart:%d.%m %H:%M}"), chg=dg.e(chg), p=round(price),
                                       approx=t["approx_fare"] if out.approx or back.approx else ""),
-                t["vac_total"].format(t=round(hotel_total + price))]
+                t["vac_total_way"].format(t=round(hotel_total + price))]
 
     def _rail_pair(self, s: dict, place: tuple[str, tuple[float, float]], out_after: datetime, back_after: datetime, adults: int,
                    ages: tuple[int, ...]):

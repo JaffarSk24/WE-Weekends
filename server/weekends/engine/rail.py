@@ -105,6 +105,11 @@ class Rail:
             return json.loads(row["body"])
         try:
             value = fetch()
+        except httpx.HTTPStatusError as exc:
+            if not 400 <= exc.response.status_code < 500:
+                log.warning("rail lookup failed: %s", exc.response.status_code)
+                return None
+            value = []  # refused for these dates, as beyond the published timetable: kept, not asked again all day
         except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
             log.warning("rail lookup failed: %s", type(exc).__name__)
             return None
