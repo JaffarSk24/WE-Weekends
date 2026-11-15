@@ -41,7 +41,7 @@ from .road import Road, km_between
 from .score import Candidate, evaluate, score
 from .stayforlong import ALL_INCLUSIVE, Offer, Stayforlong
 from .store import Store
-from .tracked import Match, Tracked, hotel_country, hotel_name, nearest
+from .tracked import Match, Tracked, hotel_country, hotel_name, nearest, short_name
 from .weather import WeatherSource
 from .wow import WowFeed
 
@@ -180,12 +180,6 @@ def family_party(fam: dict) -> tuple[int, int, int, tuple[int, ...]]:
     children = sum(1 for a in ages if 2 <= a <= 11)
     infants = sum(1 for a in ages if a < 2)
     return adults, children, infants, ages
-
-
-def short_name(name: str) -> str:
-    """The hotel's own name without what Booking.com appends to it, such as
-    "- Ultra All Inclusive & Private Beach"."""
-    return re.split(r"\s[-\u2013|]\s|,", name)[0].strip()
 
 
 def grown(adults: int, ages: tuple[int, ...]) -> int:

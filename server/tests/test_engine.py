@@ -1308,3 +1308,19 @@ def test_hotel_place_comes_from_stayforlong_with_its_town(tmp_path):
 
     place = Locator(Database(str(tmp_path / "l.sqlite")), S())("https://www.booking.com/hotel/it/atlantic-hotel-lignano.html", "", "it")
     assert (place["lat"], place["place"], place["source"]) == (45.679817, "Lignano Sabbiadoro", "stayforlong")
+
+
+def test_town_in_the_address_beats_a_namesake_of_the_typed_name(tmp_path):
+    from weekends.db import Database
+    from weekends.engine.locate import Locator
+
+    class S:
+        def suggest(self, keyword):
+            return [{"ID": 1, "Type": "hotel", "Country": "it", "Text": "Hotel Croce di Malta", "Description": "Jesolo, Jesolo, Veneto",
+                     "Coordinate": {"lat": 45.516, "lon": 12.68}},
+                    {"ID": 2, "Type": "hotel", "Country": "it", "Text": "Hotel Croce Di Malta", "Description": "Lignano Pineta, Lignano Pineta, Lignano Sabbiadoro",
+                     "Coordinate": {"lat": 45.665, "lon": 13.105}}]
+
+    place = Locator(Database(str(tmp_path / "l.sqlite")), S())("https://www.booking.com/hotel/it/croce-di-malta-lignano-sabbiadoro.html",
+                                                               "Hotel Croce di Malta", "it")
+    assert place["place"] == "Lignano Pineta"

@@ -17,7 +17,7 @@ import time
 
 from ..db import Database
 from .places import words
-from .tracked import similarity, slug_words
+from .tracked import short_name, similarity, slug_words
 
 log = logging.getLogger("weekends.locate")
 MATCH = 0.75  # the share of the address words a hit must carry, the distinctive ones counted double
@@ -49,20 +49,28 @@ class Locator:
         if fact:
             return {"lat": fact["lat"], "lon": fact["lon"], "name": fact["name"], "place": fact.get("city", ""), "source": "facts"}
         _, slug = slug_words(url)
-        wanted = list(words(alias)) if alias else slug
-        query = alias or " ".join(slug)
+        named = list(words(alias)) if alias else []
         if self.sfl is not None:
-            best, best_score = None, 0.0
-            for h in self.sfl.suggest(query):
+            # The address words carry the town ("croce-di-malta-lignano-sabbiadoro"), the name the user typed may
+            # not: a hit in the address's town wins over a namesake elsewhere, the typed name serves a renamed hotel.
+            hits = {}
+            for query in dict.fromkeys(q for q in (" ".join(slug), alias) if q):
+                for h in self.sfl.suggest(query):
+                    hits.setdefault(str(h.get("ID")), h)
+            best, best_rank = None, (False, 0.0, 0.0)
+            for h in hits.values():
                 if h.get("Type") not in ("hotel", "apartment") or (country and str(h.get("Country", "")).lower() != country) or not h.get("Coordinate"):
                     continue
-                # the town is in the description: "Lignano Sabbiadoro, Lignano Sabbiadoro, Friuli..."
-                score = similarity(wanted, f"{h.get('Text', '')} {h.get('Description', '')}")
-                if score > best_score:
-                    best, best_score = h, score
-            if best is not None and best_score >= MATCH:
-                return {"lat": float(best["Coordinate"]["lat"]), "lon": float(best["Coordinate"]["lon"]), "name": str(best.get("Text", ""))[:120],
+                text = f"{h.get('Text', '')} {h.get('Description', '')}"  # the description starts with the town
+                by_address, by_name = similarity(slug, text) if slug else 0.0, similarity(named, text) if named else 0.0
+                rank = (by_address >= MATCH, by_address, by_name)
+                if (by_address >= MATCH or by_name >= MATCH) and rank > best_rank:
+                    best, best_rank = h, rank
+            if best is not None:
+                return {"lat": float(best["Coordinate"]["lat"]), "lon": float(best["Coordinate"]["lon"]), "name": short_name(str(best.get("Text", "")))[:120],
                         "place": str(best.get("Description", "")).split(",")[0].strip()[:80], "source": "stayforlong"}
+        wanted = named or slug
+        query = alias or " ".join(slug)
         if self.road is not None and country:
             for p in self.road.find_hotel(query, country):
                 if similarity(wanted, f"{p['name']} {p['place']}") >= MATCH:

@@ -75,6 +75,12 @@ def slug_words(url: str) -> tuple[str, list[str]]:
     return "", list(words(t.group(1).replace("_", " "))) if t else []
 
 
+def short_name(name: str) -> str:
+    """A hotel's own name without what a site appends to it, such as
+    "- Ultra All Inclusive & Private Beach"."""
+    return re.split(r"\s[-\u2013|]\s|,", name)[0].strip()
+
+
 def hotel_name(url: str) -> str:
     """A readable name from the address, before the hotel is looked up."""
     t = re.search(r"-Reviews-([^-]+)-", url)
@@ -259,7 +265,9 @@ class Tracked:
                     distance = km(here, (float(g["latitude"]), float(g["longitude"])))
                     if distance > MAX_KM:
                         continue
-                score = similarity(wanted, h.get("name", ""))
+                # both ways: "Vogue Hotel Supreme Bodrum" here, "Vogue Hotel Supreme" there
+                score = max(similarity(wanted, h.get("name", "")), similarity(list(words(h.get("name", ""))), " ".join(wanted))) if here \
+                    else similarity(wanted, h.get("name", ""))
                 if score > best_score or (score == best_score and best is not None and distance < best_km):
                     best, best_score, best_km = h, score, distance
             if best_score >= 0.99:
