@@ -668,6 +668,9 @@ function settingsView() {
         if (!st || st.status === 'pending') status.textContent = t('hotel_pending');
         else if (st.status === 'found') status.append(fmt('hotel_found', { name: st.name, r: (st.rating || 0).toFixed(1), c: st.reviews || 0 }), ...checks().flat());
         else if (st.status === 'located') status.append(fmt('hotel_located', { name: st.name }), ...checks().flat());
+        // Not found on TripAdvisor: its link makes the match exact, and a search finds the page in a click.
+        const findTa = () => h('p', { class: 'hint' }, t('hotel_add_ta'), ' ',
+          h('a', { href: `https://www.google.com/search?q=${encodeURIComponent(`${(st && st.name) || hotelLabel(url)} ${(st && st.place) || ''} tripadvisor`)}`, target: '_blank', rel: 'noopener noreferrer' }, t('hotel_find_ta')));
         const alias = h('input', { type: 'text', maxlength: 100, value: trip.hotel_names[url] || '', placeholder: t('hotel_alias'), 'aria-label': t('hotel_alias'),
           oninput: (e) => { const v = e.target.value.replace(/[<>\u0000-\u001f]/g, ''); if (v.trim()) trip.hotel_names[url] = v; else delete trip.hotel_names[url]; markDirty(); } });
         // Between full summaries a hotel with a price here writes only once it costs that or less.
@@ -679,7 +682,8 @@ function settingsView() {
             h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, hotelLabel(url)),
             h('button', { type: 'button', 'aria-label': `${t('remove')} ${hotelLabel(url)}`, onclick: () => { trip.hotels.splice(i, 1); delete trip.hotel_names[url]; delete trip.price_alerts[url]; paintHotels(); markDirty(); } }, '×')),
           h('label', { class: 'alert' }, t('alert_label'), alert, h('span', { class: 'muted' }, '€')),
-          st && st.status === 'not_found' ? h('div', { class: 'hotel-fix' }, h('p', { class: 'hotel-status not_found' }, t('hotel_not_found')), alias) : status);
+          st && st.status === 'not_found' ? h('div', { class: 'hotel-fix' }, h('p', { class: 'hotel-status not_found' }, t('hotel_not_found')), alias, findTa()) : status,
+          st && st.status === 'located' && !url.includes('tripadvisor.') ? findTa() : '');
       };
       hotels.replaceChildren(
         trip.hotels.length ? h('div', { class: 'hotel-list' }, ...trip.hotels.map(row)) : '',

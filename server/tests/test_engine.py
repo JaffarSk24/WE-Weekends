@@ -1324,3 +1324,20 @@ def test_town_in_the_address_beats_a_namesake_of_the_typed_name(tmp_path):
     place = Locator(Database(str(tmp_path / "l.sqlite")), S())("https://www.booking.com/hotel/it/croce-di-malta-lignano-sabbiadoro.html",
                                                                "Hotel Croce di Malta", "it")
     assert place["place"] == "Lignano Pineta"
+
+
+def test_a_tripadvisor_link_teaches_the_town(tmp_path):
+    from weekends.db import Database
+    from weekends.engine.tracked import Tracked
+    tracked = Tracked(Database(str(tmp_path / "t.sqlite")), locate=lambda u, alias, country: {"lat": 45.665, "lon": 13.105, "name": "Hotel Croce Di Malta",
+                                                                                             "place": "Lignano Pineta"})
+    lignano = [{"key": "g194796-d529368", "name": "Hotel Atlantic", "geo": {"latitude": 45.6799, "longitude": 13.1295}},
+               {"key": "g194796-d1450416", "name": "Croce di Malta", "geo": {"latitude": 45.6652, "longitude": 13.1053}}]
+    tracked._hotels = lambda geo, budget: iter(lignano if geo == "g194796" else [])
+    tracked._near["it"] = []  # the country list knows nothing around Lignano
+    assert tracked.resolve("https://www.booking.com/hotel/it/croce-di-malta-lignano-sabbiadoro.html").status == "located"
+    tracked.resolve("https://www.tripadvisor.com/Hotel_Review-g194796-d529368-Reviews-Hotel_Atlantic-Lignano_Sabbiadoro_Province_of_Udine.html")
+    with tracked.db.tx() as con:
+        con.execute("DELETE FROM hotel_map WHERE url LIKE '%booking%'")
+    m = tracked.resolve("https://www.booking.com/hotel/it/croce-di-malta-lignano-sabbiadoro.html")
+    assert (m.status, m.key) == ("found", "g194796-d1450416")  # the town learned from the link of its neighbour

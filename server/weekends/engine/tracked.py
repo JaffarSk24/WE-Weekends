@@ -134,6 +134,8 @@ class Tracked:
                 con.execute("ALTER TABLE hotel_map ADD COLUMN place TEXT NOT NULL DEFAULT ''")
                 con.execute("ALTER TABLE hotel_map ADD COLUMN ta_url TEXT NOT NULL DEFAULT ''")
             con.execute("CREATE TABLE IF NOT EXISTS hotel_cache (key TEXT PRIMARY KEY, body TEXT NOT NULL, fetched_at INTEGER NOT NULL)")
+            # TripAdvisor town areas learned from the hotels found: the next hotel in the same town is found without a link.
+            con.execute("CREATE TABLE IF NOT EXISTS ta_areas (geo TEXT PRIMARY KEY, lat REAL NOT NULL, lon REAL NOT NULL)")
 
     # -- cache -------------------------------------------------------------
     def _get(self, key: str, ttl: int, url: str, params: dict) -> dict | list | None:
@@ -187,8 +189,8 @@ class Tracked:
         """The TripAdvisor areas of the towns around a place: learned from the
         country-wide list (its best 3000 hotels or so), the areas of the
         hotels within NEAR_KM counted, the most common first."""
-        if country not in TA_COUNTRIES:
-            return []
+        if country not in self._near and country not in TA_COUNTRIES:
+            self._near[country] = []
         if country not in self._near:
             points = []
             for item in self._hotels(TA_COUNTRIES[country], [COUNTRY_PAGES]):
@@ -196,8 +198,10 @@ class Tracked:
                 if g.get("latitude") is not None and "-" in str(item.get("key", "")):
                     points.append((float(g["latitude"]), float(g["longitude"]), str(item["key"]).split("-")[0]))
             self._near[country] = points
+        with self.db.tx() as con:
+            learned = [(r["lat"], r["lon"], r["geo"]) for r in con.execute("SELECT geo, lat, lon FROM ta_areas")]
         counts: dict[str, int] = {}
-        for lat, lon, geo in self._near[country]:
+        for lat, lon, geo in self._near[country] + [x for x in learned for _ in range(5)]:  # a learned area counts like five hotels
             if km(spot, (lat, lon)) <= NEAR_KM:
                 counts[geo] = counts.get(geo, 0) + 1
         return sorted(counts, key=lambda g: -counts[g])[:4]
@@ -230,6 +234,8 @@ class Tracked:
                         " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (url, alias, match.status, match.key, match.name, match.rating, match.reviews, match.lat, match.lon, int(time.time()),
                          match.place, match.ta_url))
+            if match.lat is not None:
+                con.execute("INSERT OR REPLACE INTO ta_areas VALUES (?, ?, ?)", (geo, match.lat, match.lon))
         return match
 
     def resolve(self, url: str, alias: str = "", geos: list[str] | None = None) -> Match:
@@ -265,9 +271,7 @@ class Tracked:
                     distance = km(here, (float(g["latitude"]), float(g["longitude"])))
                     if distance > MAX_KM:
                         continue
-                # both ways: "Vogue Hotel Supreme Bodrum" here, "Vogue Hotel Supreme" there
-                score = max(similarity(wanted, h.get("name", "")), similarity(list(words(h.get("name", ""))), " ".join(wanted))) if here \
-                    else similarity(wanted, h.get("name", ""))
+                score = similarity(wanted, h.get("name", ""))
                 if score > best_score or (score == best_score and best is not None and distance < best_km):
                     best, best_score, best_km = h, score, distance
             if best_score >= 0.99:

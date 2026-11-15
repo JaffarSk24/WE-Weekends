@@ -861,7 +861,7 @@ class Engine:
                 country = hotel_country(m)
                 slug = hotel_name(m.url)
                 name = m.name if m.status in ("found", "located") and m.name else (v["hotel_names"].get(m.url) or slug)
-                ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or name, m.lat, m.lon, country)
+                ref = self.sfl.resolve(m.url, v["hotel_names"].get(m.url) or name, m.lat, m.lon, country, m.place)
                 priced, offer, total = self._holiday_price(m.key if m.status == "found" else "", ref, lang, v, start, end, stay_adults, ages)
                 rating = t["stay_rating"].format(r=f"{m.rating:.1f}", c=m.reviews) if m.status == "found" else ""
                 self.holiday["asked"] += 1

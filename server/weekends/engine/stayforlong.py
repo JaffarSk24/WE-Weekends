@@ -121,11 +121,12 @@ class Stayforlong:
             con.execute("INSERT OR REPLACE INTO sfl_cache (key, body, fetched_at) VALUES (?, ?, ?)", (key, json.dumps(hits), int(time.time())))
         return hits
 
-    def search(self, name: str, lat: float | None, lon: float | None, country: str) -> tuple[str, str] | None:
+    def search(self, name: str, lat: float | None, lon: float | None, country: str, place: str = "") -> tuple[str, str] | None:
         """(Stayforlong id, page path) of the hotel with this name: the hit
         in the same country whose name matches best, standing within 2 km.
         Without coordinates only a near-exact name does."""
-        hits = self.suggest(name)
+        # with the town too: a plain "Hotel Atlantic" brings namesakes from everywhere first
+        hits = list({str(h.get("ID")): h for q in dict.fromkeys(x for x in (f"{name} {place}".strip(), name) if x) for h in self.suggest(q)}.values())
         wanted = list(words(name))
         best, best_score = None, 0.0
         for h in hits if isinstance(hits, list) else []:
@@ -149,7 +150,7 @@ class Stayforlong:
             self.positions[str(best["ID"])] = (float(c["lat"]), float(c["lon"]))
         return str(best["ID"]), hotel_path(country, str(best["Slug"]), str(best["CitySlug"]))
 
-    def resolve(self, url: str, name: str, lat: float | None, lon: float | None, country: str) -> tuple[str, str] | None:
+    def resolve(self, url: str, name: str, lat: float | None, lon: float | None, country: str, place: str = "") -> tuple[str, str] | None:
         """search(), remembered per Booking address."""
         with self.db.tx() as con:
             row = con.execute("SELECT * FROM sfl_map WHERE url = ?", (url,)).fetchone()
@@ -157,7 +158,7 @@ class Stayforlong:
             row = None  # matched before positions were kept: looked up once more
         if row and (row["status"] == "found" or time.time() - row["checked_at"] < RECHECK_NOT_FOUND):
             return (row["sfl_id"], row["path"]) if row["status"] == "found" else None
-        found = self.search(name, lat, lon, country) if name else None
+        found = self.search(name, lat, lon, country, place) if name else None
         lat_lon = self.positions.get(found[0]) if found else None
         with self.db.tx() as con:
             con.execute("INSERT OR REPLACE INTO sfl_map (url, status, sfl_id, path, checked_at, lat, lon) VALUES (?, ?, ?, ?, ?, ?, ?)",
