@@ -854,7 +854,7 @@ class Engine:
                 lines.append(f"<i>{dg.e(period)}</i>")
             booking_q = f"?checkin={start}&checkout={end}&group_adults={stay_adults}&group_children={len(ages)}&no_rooms=1&selected_currency=EUR" + "".join(f"&age={a}" for a in ages)
             for m in matches:
-                if "booking.com" in m.url:
+                if m.url.startswith("https://www.booking.com/hotel/"):
                     link = dg.e(m.url + booking_q)
                 else:  # a hotel given by its TripAdvisor address: Booking.com searched by its name for the dates
                     link = dg.e("https://www.booking.com/searchresults.html" + booking_q + "&" + urlencode({"ss": f"{m.name} {m.place}".strip()}))

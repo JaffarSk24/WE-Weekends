@@ -652,7 +652,7 @@ function settingsView() {
       const msg = h('p', { class: 'error small', role: 'alert' });
       const add = () => {
         const url = normalizeBooking(input.value);
-        if (!url) { msg.textContent = /booking\.com\/share-/i.test(input.value) ? t('hotel_share') : t('hotel_bad'); return; }
+        if (!url) { msg.textContent = isBookingShare(input.value) ? t('hotel_share') : t('hotel_bad'); return; }
         if (!trip.hotels.includes(url) && trip.hotels.length < 10) { trip.hotels.push(url); markDirty(); }
         paintHotels();
       };
@@ -843,6 +843,14 @@ async function refreshHotels(tries = 0) {
   for (const st of res.data.hotels) hotelStatus[st.url] = st;
   for (const paint of hotelPainters) paint(true);
   if (res.data.hotels.some((st) => st.status === 'pending') && tries < 36) hotelTimer = setTimeout(() => refreshHotels(tries + 1), 5000);
+}
+
+// A short "share" link of the Booking.com app, which names no hotel: the user is told to open it first.
+function isBookingShare(value) {
+  try {
+    const url = new URL(value.trim());
+    return ['www.booking.com', 'booking.com', 'm.booking.com'].includes(url.hostname) && url.pathname.toLowerCase().startsWith('/share-');
+  } catch { return false; }
 }
 
 // A Booking.com or TripAdvisor hotel page, without its query; the server checks it again.

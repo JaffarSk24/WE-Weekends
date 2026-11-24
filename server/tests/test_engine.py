@@ -637,7 +637,7 @@ def test_stay_always_gets_a_price(tmp_path, monkeypatch):
     assert (got.name, got.price, got.source) == ("Sea View", 420, "stayforlong") and "google.com/travel/search?q=Sea+View+Naples" in got.compare
     monkeypatch.setattr(hm, "stay_baseline", lambda: {"cities": {"NAP": 100}, "countries": {"IT": 90}, "all": 80})
     guess = Hotels(Database(str(tmp_path / "b.sqlite")), Around(None)).cheapest(q)
-    assert (guess.source, guess.price, guess.approx) == ("estimate", 270, True) and "booking.com" in guess.url  # 100 a night, a third more for the child
+    assert (guess.source, guess.price, guess.approx) == ("estimate", 270, True) and guess.url.startswith("https://www.booking.com/searchresults.html?")  # 100 a night, a third more for the child
     assert hm.estimate(stay_query(iata="XXX", adults=1, children=())) == 153  # the country's price, most of a double for one
     assert hm.estimate(stay_query(iata="XXX", country="ZZ")) == 216
     monkeypatch.setattr(hm, "stay_baseline", lambda: {})

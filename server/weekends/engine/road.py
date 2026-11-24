@@ -142,7 +142,8 @@ class Road:
         try:
             value = fetch()
         except (httpx.HTTPError, ValueError, KeyError, IndexError, zipfile.BadZipFile, ElementTree.ParseError) as exc:
-            log.warning("road source failed for %s: %s", key.split(":", 1)[0], type(exc).__name__)
+            source = next((name for name in ("geo", "hotel", "route", "table", "fuel") if key.startswith(f"{name}:")), "other")
+            log.warning("road source failed for %s: %s", source, type(exc).__name__)
             return json.loads(row["body"]) if row else None  # an old answer beats none
         if value is not None:
             with self.db.tx() as con:
